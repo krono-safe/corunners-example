@@ -1,0 +1,4 @@
+/build/
+/outdir/
+*.sw?
+__pycache__/
