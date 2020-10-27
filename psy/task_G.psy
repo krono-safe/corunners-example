@@ -1,0 +1,131 @@
+/************ Copyright Krono-Safe S.A. 2020, All rights reserved ************/
+
+#include <app.psyh>
+
+agent task_G (uses realtime, defaultclock clk_s, starttime 2)
+{
+  consult { 1 $ G_CONTROL; }
+
+  global {
+    float noise_mat[IMG_H][IMG_W];
+    unsigned char image[IMG_H][IMG_W];
+  }
+
+#define GEN_TASK_G_LOCAL_WORK(EA) \
+  GEN_WORK(EA, filter, noise_mat, image, $[0]G_CONTROL.work_iterations)
+
+#define GEN_TASK_G_SHARED_WORK(EA) \
+  GEN_WORK(EA, filter2, global_noise_matrix, image, $[0]G_CONTROL.work_iterations)
+
+
+  body start
+  {
+    /* G0 */
+    GEN_TASK_G_LOCAL_WORK("G0");
+    jump body_at_g1;
+  }
+
+  body body_at_g1
+  {
+    @g_at_1 advance 1; /* <--- closes */
+
+    /* G1 */
+    GEN_TASK_G_LOCAL_WORK("G1");
+    @g_n1 advance 1;
+
+    switch ($[0]G_CONTROL.switch_value)
+    {
+    case SWITCH_TO_G2:
+      {
+        /* G2 */
+        GEN_TASK_G_LOCAL_WORK("G2");
+        @g_n2 advance 1;
+        /* G3 */
+        GEN_TASK_G_SHARED_WORK("G3");
+        @g_n3 advance 1;
+        /* G4 */
+        GEN_TASK_G_LOCAL_WORK("G4");
+        jump body_at_g5;
+      }
+
+    case SWITCH_TO_G7:
+      {
+        /* G7 */
+        GEN_TASK_G_LOCAL_WORK("G7");
+        @g_n4 advance 1;
+        /* G8 */
+        GEN_TASK_G_SHARED_WORK("G8");
+        jump body_at_g9;
+      }
+
+    case SWITCH_TO_G10:
+      {
+        /* G10 */
+        GEN_TASK_G_LOCAL_WORK("G10");
+        @g_n5 advance 1;
+        /* G11 */
+        GEN_TASK_G_LOCAL_WORK("G11");
+        jump body_at_g9;
+      }
+
+    default: /* (SWITCH_TO_G12) */
+      {
+        /* G12 */
+        GEN_TASK_G_LOCAL_WORK("G12");
+        jump body_at_g17;
+      }
+    }
+  }
+
+  body body_at_g9
+  {
+    @g_at_9 advance 1; /* <--- closes */
+    /* G9 */
+    GEN_TASK_G_LOCAL_WORK("G9");
+    jump body_at_g5;
+  }
+
+  body body_at_g5
+  {
+    @g_at_5 advance 1; /* <--- closes */
+    /* G5 */
+    GEN_TASK_G_LOCAL_WORK("G5");
+    jump body_at_g6;
+  }
+
+  body body_at_g6
+  {
+    @g_at_6 advance 1; /* <--- closes */
+    /* G6 */
+    GEN_TASK_G_SHARED_WORK("G6");
+    jump body_at_g1;
+  }
+
+  body body_at_g17
+  {
+    @g_at_17 advance 1; /* <--- closes */
+
+    /* G17 */
+    GEN_TASK_G_LOCAL_WORK("G17");
+    @g_n6 advance 1;
+    /* G13 */
+    GEN_TASK_G_LOCAL_WORK("G13");
+    @g_n7 advance 1;
+
+    if ($[0]G_CONTROL.cond_g14_or_g15)
+    {
+      /* G14 */
+      GEN_TASK_G_SHARED_WORK("G14");
+      @g_n8 advance 1;
+      /* G16 */
+      GEN_TASK_G_LOCAL_WORK("G16");
+      jump body_at_g17;
+    }
+    else
+    {
+      /* G15 */
+      GEN_TASK_G_LOCAL_WORK("G15");
+      jump body_at_g6;
+    }
+  }
+}

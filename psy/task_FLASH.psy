@@ -1,0 +1,31 @@
+/************ Copyright Krono-Safe S.A. 2020, All rights reserved ************/
+
+#include <app.psyh>
+
+agent task_FLASH (uses realtime, defaultclock clk_s)
+{
+  global {
+    float noise_mat[IMG_H][IMG_W];
+    unsigned char image[IMG_H][IMG_W];
+    unsigned int counter = 12u;
+  }
+
+  body start {
+    /* C0 -- not interesting, do nothing */
+    jump body_at_c1;
+  }
+
+  body body_at_c1 {
+    counter = ((counter - 1u) % 12u);
+    if (counter == 0) { counter = 4; }
+
+    @c1 advance 1; /* <--- closes */
+
+    /* C1 */
+    GEN_WORK("C1", filter, noise_mat, image, counter);
+
+    @c2 advance 1;
+    /* C2 */
+    GEN_WORK("C2", filter2, noise_mat, image, counter);
+  }
+}

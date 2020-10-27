@@ -1,0 +1,26 @@
+{
+  "app": {
+    "agents": [
+      {
+        "name": "task_FLASH",
+        "eas": [
+          {
+            "from": "start",
+            "to": "c1",
+            "name": "F0"
+          },
+          {
+            "from": "c1",
+            "to": "c2",
+            "name": "F1"
+          },
+          {
+            "from": "c2",
+            "to": "c1",
+            "name": "F2"
+          }
+        ]
+      }
+    ]
+  }
+}

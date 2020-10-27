@@ -1,0 +1,10 @@
+* text=auto
+*.py    text
+*.md    text
+*.hjson text
+*.h     text
+*.psy   text
+*.c     text
+*.psyh  text
+
+*.bin -text
