@@ -47,12 +47,32 @@ result <- fromJSON(file = "{ea}.json")
 data <- as.data.frame(result)
 
 g <- data[ data$group == "Core {core}" , ]
+# n: number of samples per plot
+t <- paste0("{ea} (core={core}, n=", dim(g)/3, ")")
+
+m1 <- g$values[ g$sample=="Task: C{cval}, Corunner: OFF" ]
+m2 <- g$values[ g$sample=="Task: C{cval}, Corunner: ON (Local)" ]
+m3 <- g$values[ g$sample=="Task: C{cval}, Corunner: ON" ]
+
+# I'm sorry for doing this... but the hardware target is so deterministic
+# that sometimes I get measures for one EA that are systematically the same,
+# so I end up with a big data frame with the same value that gets repeated.
+# This does not go well with violplot...
+# So, if all my values are identical, I add 1e-11 to my very first measure,
+# so it can be taken as-is by vioplot to displpay a horizontal bar.
+# Sorry, I'm too unfamiliar with R and such things...
+# I don't think this is significant, though, as my measures are precise at
+# 1e-7. So adding 1e^-11 JUST FOR THE DISPLAY should not harm in any way.
+if (length(unique(m1)) == 1) {{ m1[1] <- m1[1] + 1e-11 }}
+if (length(unique(m2)) == 1) {{ m2[1] <- m2[1] + 1e-11 }}
+if (length(unique(m3)) == 1) {{ m3[1] <- m3[1] + 1e-11 }}
+
 vioplot(
-    g$values[ g$sample=="Task: C{cval}, Corunner: OFF" ],
-    g$values[ g$sample=="Task: C{cval}, Corunner: ON (Local)" ],
-    g$values[ g$sample=="Task: C{cval}, Corunner: ON" ],
+    m1,
+    m2,
+    m3,
     col="grey75", line=2.1,
-    xlab="{ea} (core {core})", ylab="Time (ms)"
+    xlab=t, ylab="Time (ms)"
 )
 """
 
@@ -104,9 +124,9 @@ def gen_stats(data):
 
     text = r"""
 \begin{tabular}{ |c|c|r|r|r|r|r| }\hline
- & \textbf{EA} & \textbf{max((1))} \textit{(ms)} & \textbf{max((2))} \textit{(ms)} & \textbf{max((3))} \textit{(ms)} & %
-  $\bm{R((1), (2))}$ \textit{(\%)}& %
-  $\bm{R((1), (3))}$ \textit{(\%)} %
+ & \textbf{EA} & \textbf{max(1)} \textit{(ms)} & \textbf{max(2)} \textit{(ms)} & \textbf{max(3)} \textit{(ms)} & %
+  $\bm{R(1, 2)}$ \textit{(\%)}& %
+  $\bm{R(1, 3)}$ \textit{(\%)} %
   \\\hline
 """
 
@@ -116,10 +136,10 @@ def gen_stats(data):
             if ea == "F0":
                 continue
             if line == 0:
-                text += r"\multirow{2}{*}{" + f"Core {core}" + r'}'
+                text += r"\multirow{2}{*}{" + f"\\textbf{{Core {core}}}" + r'}'
                 line += 1
-            text += f' & {ea} & {info[0]:.4f} & {info[1]:.4f} & '
-            text += f'{info[2]:.4f} & {info[3]:.4f} & {info[4]:.4f}'
+            text += f' & {ea} & {info[0]:.3f} & {info[1]:.3f} & '
+            text += f'{info[2]:.3f} & {info[3]:.3f} & {info[4]:.3f}'
             text += '\\\\'
             if line == 2:
                 text += r'\hline'

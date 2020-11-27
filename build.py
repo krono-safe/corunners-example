@@ -86,6 +86,7 @@ class Help:
     CORE = "ID of the core on which the task will run; must not conflict with --corunner-id"
     LOCAL_CORUNNERS = "If set, co-runners will be configured to only access local memories"
     OUTPUT = "Path where the executable is to be generated"
+    PRODUCT = "Name of the ASTERIOS RTK Product"
 
 def getopts(argv):
     parser = argparse.ArgumentParser(description='Corunners builder')
@@ -93,6 +94,8 @@ def getopts(argv):
                         help=Help.PSYKO, required=True)
     parser.add_argument("--rtk-dir", "-K", type=Path,
                         help=Help.RTK_DIR, required=True)
+    parser.add_argument("--product", "-p", type=str,
+                        help=Help.PRODUCT, default="power-mpc5777m-evb")
     parser.add_argument("--corunner-id", "-C", type=int, choices=[0, 1, 2],
                         action="append", help=Help.CORUNNER_ID, default=[])
     parser.add_argument("--task", "-T", type=str, choices=["H", "G", "FLASH"],
@@ -133,11 +136,12 @@ def gen_corunner_config(output_filename, identifier, symbol, object_file):
     })
 
 
-def gen_corunner_source(output_filename, symbol):
-    cmd = [
-        sys.executable, TOP_DIR / "scripts" / "gen-corunner.py",
-        symbol, "--jumps", "2048",
-    ]
+def gen_corunner_source(output_filename, symbol, *, sram=False):
+    cmd = [sys.executable, TOP_DIR / "scripts" / "gen-corunner.py", symbol]
+    if sram:
+        cmd += ["--sram"]
+    else:
+        cmd += ["--jump", "2048"]
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True) as proc:
         with open(output_filename, "w") as fileh:
             fileh.write(proc.stdout.read())
@@ -152,7 +156,6 @@ def get_sources(task_name):
     psy_sources = [PSY_DIR / f"task_{task_name}.psy"]
     if task_name != "FLASH":
         c_sources += [
-            SRC_DIR / "globals.c",
             STUBS_DIR / f"suite_task_{task_name}.c",
         ]
         psy_sources += [STUBS_DIR / f"for_task_{task_name}.psy"]
@@ -185,11 +188,12 @@ def main(argv):
     for corunner in args.corunner_id:
         co_config = args.build_dir / f"corunner_{corunner}.hjson"
         co_obj = args.build_dir / f"corunner_{corunner}.asm"
-        symbol = f"co_runner_flash{args.core}"
+        use_sram = corunner == 0
+        symbol = f"co_runner_sram{corunner}" if use_sram else f"co_runner_flash{corunner}"
         app_configs.append(co_config)
         sources["asm"].append(co_obj)
         gen_corunner_config(co_config, corunner, symbol, object_of(co_obj))
-        gen_corunner_source(co_obj, symbol)
+        gen_corunner_source(co_obj, symbol, sram=use_sram)
 
     if args.task != "FLASH":
         stub_config = args.build_dir / "stub.hjson"
@@ -215,15 +219,32 @@ def main(argv):
         cmd = [
             args.psyko,
             "-K", args.rtk_dir,
-            "--product", "power-mpc5777m-evb",
+            "--product", args.product,
         ] + [*cmd_args]
         print("[RUN] ", end='')
         for item in cmd:
             print(f"'{item}' ", end='')
         print()
-        ret = subprocess.run(
-            cmd, timeout=30, cwd=TOP_DIR, env=env, universal_newlines=True)
-        assert ret.returncode == 0, "Failed to run psyko"
+
+        # Run psyko... This is run in an infinite loop to handle timeouts...
+        # This is especially annoying when you have a weak network connection and
+        # that you fail to request a License. Since running all tests to collect
+        # measures is quite slow, failing because of a timeout on such problems
+        # is quite unpleasant.
+        # So, in case of a network error (highly suggested by the timeout), we
+        # just try again. It's kind of a kludge, but actually saved to much
+        # time.
+        def run_cmd(cmd):
+            try:
+                ret = subprocess.run(
+                    cmd, timeout=30, cwd=TOP_DIR, env=env, universal_newlines=True)
+                assert ret.returncode == 0, "Failed to run psyko"
+                return True
+            except subprocess.TimeoutExpired:
+                return False
+
+        while not run_cmd(cmd):
+            pass
 
     def psyko_cc(c_source):
         generated_object = object_of(c_source)

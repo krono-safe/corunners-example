@@ -9,13 +9,14 @@ agent task_H (uses realtime, defaultclock clk_s, starttime 2)
   global {
     float noise_mat[IMG_H][IMG_W];
     unsigned char image[IMG_H][IMG_W];
+    unsigned int counter = 0u;
   }
 
 #define GEN_TASK_H_LOCAL_WORK(EA) \
-  GEN_WORK(EA, filter, noise_mat, image, $[0]H_CONTROL.work_iterations)
+  GEN_WORK(EA, filter, noise_mat, image, $[0]H_CONTROL.work_iterations, counter)
 
 #define GEN_TASK_H_SHARED_WORK(EA) \
-  GEN_WORK(EA, filter2, global_noise_matrix, image, $[0]H_CONTROL.work_iterations)
+  GEN_WORK(EA, filter2, noise_mat, image, $[0]H_CONTROL.work_iterations, counter)
 
 
   body start

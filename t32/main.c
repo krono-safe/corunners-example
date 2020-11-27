@@ -3,6 +3,7 @@
 #include <t32.h> /* <--- this require the T32 C API */
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
@@ -60,12 +61,38 @@ static void config_set(const char *const p1, const char *const p2)
   { DIE(ret, "Failed to set config '%s%s'", p1, p2); }
 }
 
+static int retry_get_state(int (*func)(int *p), int *state)
+{
+  int ret;
+  int retry_count = 8;
+
+  assert(state != NULL);
+  assert(func != NULL);
+
+again:
+  ret = func(state);
+  switch (ret)
+  {
+    /* Network errors actually happen there.... */
+  case T32_ERR_COM_RECEIVE_FAIL: /* fallthrough */
+  case T32_ERR_COM_TRANSMIT_FAIL:
+    if (retry_count <= 0)
+    { return ret; }
+    retry_count--;
+    sleep(5); /* Rest a bit */
+    goto again;
+
+  default:
+    return ret;
+  }
+}
+
 static void wait_exec(const int delay_s)
 {
   for (;;)
   {
     int state;
-    const int ret = T32_GetState(&state);
+    const int ret = retry_get_state(&T32_GetState, &state);
     if (ret != T32_OK)
     { DIE(ret, "Failed to query Trace32 program state"); }
 
@@ -103,7 +130,7 @@ static void wait_practise(const int delay_s)
   for (;;)
   {
     int p_state;
-    const int ret = T32_GetPracticeState(&p_state);
+    const int ret = retry_get_state(&T32_GetPracticeState, &p_state);
     if (ret != T32_OK)
     { DIE(ret, "Failed to query Trace32 state"); }
 
