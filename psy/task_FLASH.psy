@@ -7,7 +7,18 @@ agent task_FLASH (uses realtime, defaultclock clk_s)
   global {
     float noise_mat[IMG_H][IMG_W];
     unsigned char image[IMG_H][IMG_W];
-    unsigned int counter = 12u;
+
+    /* Take a look at app.h. The counter is incremented by one each
+     * "GEN_WORK", but we want to keep it constant between iterations
+     * (hence the counter-- after these calls)
+     * It is initialized to 39 because the following computations are
+     * performed:
+     *   int max = (IMG_H + Counter + 60) % IMG_H + 1
+     * we want a max value to be IMG_H, so counter must be 39.
+     *
+     * That's a bit convoluted, but enables code factorization.
+     */
+    unsigned int counter = 39u;
   }
 
   body start {
@@ -16,16 +27,15 @@ agent task_FLASH (uses realtime, defaultclock clk_s)
   }
 
   body body_at_c1 {
-    counter = ((counter - 1u) % 12u);
-    if (counter == 0) { counter = 4; }
-
     @c1 advance 1; /* <--- closes */
 
     /* C1 */
-    GEN_WORK("C1", filter, noise_mat, image, counter);
+    GEN_WORK("FLASH", filter, noise_mat, image, 12, counter);
+    counter--;
 
     @c2 advance 1;
     /* C2 */
-    GEN_WORK("C2", filter2, noise_mat, image, counter);
+    GEN_WORK("FLASH", filter2, noise_mat, image, 12, counter);
+    counter--;
   }
 }

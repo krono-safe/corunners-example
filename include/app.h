@@ -32,15 +32,11 @@ struct g_control {
   signed char cond_g14_or_g15;
 };
 
-extern float global_noise_matrix[IMG_W][IMG_H];
-
-void flash_use(unsigned int counter);
 uint32_t crc32(const void *const data, size_t len);
 void filter(float noise[IMG_H][IMG_W], unsigned char image[IMG_H][IMG_W]);
 void filter2(float noise[IMG_H][IMG_W], unsigned char image[IMG_H][IMG_W]);
 
-
-#define GEN_WORK(Seed, Filter, NoiseMat, Img, Iterations) \
+#define GEN_WORK(Seed, Filter, NoiseMat, Img, Iterations, Counter) \
   { \
     int nb_iterations = (Iterations); \
     int seed_size = 0; \
@@ -50,7 +46,8 @@ void filter2(float noise[IMG_H][IMG_W], unsigned char image[IMG_H][IMG_W]);
     for (int runs = 0; runs < nb_iterations; runs++) { \
       const uint32_t s = crc32(Seed, seed_size); \
       int shift = 0; \
-      for (int i = 0; i  < IMG_H; i++) { \
+      int max = ((IMG_H + (int)Counter + 60) % IMG_H + 1); \
+      for (int i = 0; i  < max; i++) { \
         for (int j = 0; j < IMG_W; j++) { \
           const float f = (float)((s >> shift) & 0xff) / 255.0f; \
           NoiseMat[i][j] = f; \
@@ -59,6 +56,7 @@ void filter2(float noise[IMG_H][IMG_W], unsigned char image[IMG_H][IMG_W]);
       } \
       Filter(NoiseMat, Img); \
     } \
+    Counter += 1u; \
   }
 
 #  pragma section CODE_FAR ".text_vle" far-absolute RX

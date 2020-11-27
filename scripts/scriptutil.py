@@ -25,10 +25,6 @@ def decode_file(input_file):
         src, dst, val, esd, ddl = struct.unpack_from(data_format, contents, offset)
         offset += item_size
         count += 1
-        if src == 0 and dst == 0:
-            print(f"{count} measures processed")
-            print(f"{all_time} ms of run-time")
-            break
 
         # Val is the number of quota timer ticks.
         #   Time_s = NbTicks / Freq_Hz
@@ -55,6 +51,8 @@ def decode_file(input_file):
             "dst": dst,
         })
 
+    print(f"{count} measures processed")
+    print(f"{all_time} ms of run-time")
     return sorted_data
 
 
