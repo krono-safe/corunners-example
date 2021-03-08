@@ -173,7 +173,7 @@ def main(argv):
     def object_of(source_filename, extension = ".o"):
         return args.build_dir / (source_filename.name + extension)
 
-    hjson_conf_file = "app."+args.product+".hjson"
+    hjson_conf_file = f"app.{args.product}.hjson"
 
     sources = get_sources(args.task)
 
