@@ -9,7 +9,6 @@ set -u
 
 PSYKO="${PSYKO:-}"
 RTK_DIR="${RTK:-}"
-#CMM= not used
 RUN_TRACE32_HOOK="${HOOK:-}"
 KDBV="${KDBV:-}"
 TYPE="${TYPE:-}"
@@ -59,7 +58,7 @@ while getopts "P:k:c:t:d:T:p:h" opt; do
       TYPE="$OPTARG"
       ;;
     p)
-      [ "$OPTAGR" != "power-qoriq-p2020-ds" ] && [ "$OPTARG" != "power-mpc5777m-evb" ] && \
+      [ "$OPTARG" != "power-qoriq-p2020-ds" ] && [ "$OPTARG" != "power-mpc5777m-evb" ] && \
         echo "Product error: currently, only power-mpc5777m-evb and power-qoriq-p2020-ds are supported"  && exit 1
       PRODUCT="$OPTARG"
       ;;
