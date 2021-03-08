@@ -168,8 +168,6 @@ def get_sources(task_name):
 
 
 def main(argv):
-
-
     args = getopts(argv)
 
     def object_of(source_filename, extension = ".o"):
@@ -185,7 +183,6 @@ def main(argv):
         CFG_DIR / f"task_{args.task}.hjson",
         ag_config,
     ]
-
     compile_config = args.build_dir / "compile.hjson"
     psymodule_config = args.build_dir / "psymodule.hjson"
     gen_agent_config(ag_config, f"task_{args.task}", args.core)
@@ -242,7 +239,6 @@ def main(argv):
             try:
                 ret = subprocess.run(
                     cmd, timeout=30, cwd=TOP_DIR, env=env, universal_newlines=True)
-                #print(cmd,TOP_DIR,env, sep='\n')
                 assert ret.returncode == 0, "Failed to run psyko"
                 return True
             except subprocess.TimeoutExpired:
@@ -268,7 +264,7 @@ def main(argv):
 
     def psyko_partition(name, objects):
         generated_object = args.build_dir / (name + ".parto")
-        psyko("partition", "--gendir", "GEN", "-o", generated_object, *objects)
+        psyko("partition", "-o", generated_object, *objects)
         return generated_object
 
     def psyko_app(partos, configs):
