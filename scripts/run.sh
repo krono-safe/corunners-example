@@ -7,15 +7,16 @@ set -u
 # Collect all input parameters via getopt
 ###############################################################################
 
-PSYKO=
-RTK_DIR=
-CMM=
-RUN_TRACE32_HOOK=
-KDBV=
-TYPE=
+PSYKO="${PSYKO:-}"
+RTK_DIR="${RTK:-}"
+#CMM= not used
+RUN_TRACE32_HOOK="${HOOK:-}"
+KDBV="${KDBV:-}"
+TYPE="${TYPE:-}"
+PRODUCT="${PRODUCT:-}"
 
 usage() {
-  echo "Usage: $0 -T H|G|flash|flash2|Hsram|Gsram -p <psyko> -k <rtk_dir> -t <runner> -d <kdbv> [-h]
+  echo "Usage: $0 -T H|G|flash|flash2|Hsram|Gsram -p <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <power-qoriq-p2020-ds|power-mpc5777m-evb> [-h]
 
   -p <psyko>    Path to the PsyC compiler
   -T H|G|flash|flash2|Hsram|Gsram
@@ -23,18 +24,26 @@ usage() {
   -d <kdbv>     Path to the kdbv program
   -k <rtk_dir>  Path to the ASTERIOS RTK
   -t <runner>   Path to the executable to control Trace32
+  -p <product>  Target product
   -h            Display this message
+Alternatively you can use the following environment variables to set the required arguments:
+  PSYKO
+  TYPE
+  KDBV
+  RTK
+  HOOK
+  PRODUCT
 "
 }
 
 
-while getopts "p:k:c:t:d:T:h" opt; do
+while getopts "P:k:c:t:d:T:p:h" opt; do
   case $opt in
     h)
       usage
       exit 0
       ;;
-    p)
+    P)
       PSYKO="$OPTARG"
       ;;
     k)
@@ -49,6 +58,11 @@ while getopts "p:k:c:t:d:T:h" opt; do
     T)
       TYPE="$OPTARG"
       ;;
+    p)
+      [ "$OPTAGR" != "power-qoriq-p2020-ds" ] && [ "$OPTARG" != "power-mpc5777m-evb" ] && \
+        echo "Product error: currently, only power-mpc5777m-evb and power-qoriq-p2020-ds are supported"  && exit 1
+      PRODUCT="$OPTARG"
+      ;;
     *)
       usage
       exit 1
@@ -57,7 +71,7 @@ while getopts "p:k:c:t:d:T:h" opt; do
 done
 
 if [ -z "$PSYKO" ]; then
-  echo "-p <psyko> is required"
+  echo "-P <psyko> is required"
   exit 1
 elif [ -z "$RTK_DIR" ]; then
   echo "-k <rtk_dir> is required"
@@ -68,6 +82,8 @@ elif [ -z "$RUN_TRACE32_HOOK" ]; then
 elif [ -z "$KDBV" ]; then
   echo "-d <kdbv> is required"
   exit 1
+elif [ -z "$PRODUCT" ]; then
+  echo "-p <power-qoriq-p2020-ds|power-mpc5777m-evb> is required"
 fi
 
 TRACES_DIR="$(pwd)/traces/${TYPE}"
@@ -112,6 +128,7 @@ run() {
     --task "$task" \
     --core "$core" \
     --build-dir "$build_dir" \
+    --product "$PRODUCT" \
     $extra_opts
 
   # And now, call a hook script to control the execution of trace32
@@ -122,13 +139,13 @@ run() {
 
 
 if [ "x$TYPE" = x"flash" ]; then
-  #   Task  Core C0  C1  C2  Local
-  run FLASH 1    OFF OFF OFF OFF "$TRACES_DIR/c0-off.bin"
-  run FLASH 1    OFF OFF ON  ON  "$TRACES_DIR/c0-on-local.bin"
-  run FLASH 1    OFF OFF ON  OFF "$TRACES_DIR/c0-on.bin"
-  run FLASH 2    OFF OFF OFF OFF "$TRACES_DIR/c1-off.bin"
-  run FLASH 2    OFF ON  OFF ON  "$TRACES_DIR/c1-on-local.bin"
-  run FLASH 2    OFF ON  OFF OFF "$TRACES_DIR/c1-on.bin"
+  #   Task  Core C0  C1  C2  Local Out
+  run FLASH 1    OFF OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
+  run FLASH 1    OFF OFF ON  ON    "$TRACES_DIR/c0-on-local.bin"
+  run FLASH 1    OFF OFF ON  OFF   "$TRACES_DIR/c0-on.bin"
+  run FLASH 2    OFF OFF OFF OFF   "$TRACES_DIR/c1-off.bin"
+  run FLASH 2    OFF ON  OFF ON    "$TRACES_DIR/c1-on-local.bin"
+  run FLASH 2    OFF ON  OFF OFF   "$TRACES_DIR/c1-on.bin"
 
   echo "
   ========= To generate the images ==========
