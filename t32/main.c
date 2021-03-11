@@ -259,7 +259,7 @@ int main(const int argc, const char *const argv[argc])
   run_script(script);
 
   /* Make sure the board is reset... otherwise it may not work... */
-  in_target_reset();
+  //in_target_reset();
 
   /* At this point, we are waiting at a breakpoint (startup). */
   next();
