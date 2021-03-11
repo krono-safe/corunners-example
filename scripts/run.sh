@@ -13,13 +13,11 @@ RUN_TRACE32_HOOK="${HOOK:-}"
 KDBV="${KDBV:-}"
 TYPE="${TYPE:-}"
 PRODUCT="${PRODUCT:-}"
-core0=
-core1=
 P2020="${P2020:-power-qoriq-p2020-ds-p}"
 MPC5777M="${MPC5777M:-power-mpc5777m-evb}"
 
 usage() {
-  echo "Usage: $0 -T H|G|flash|flash2|Hsram -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$p2020|$mpc5777m> [-h]
+  echo "Usage: $0 -T H|G|flash|flash2|Hsram -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$P2020|$MPC5777M> [-h]
 
   -p <psyko>    Path to the PsyC compiler
   -T H|G|flash|flash2|Hsram
