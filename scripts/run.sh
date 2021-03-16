@@ -99,23 +99,31 @@ echo "Make sure you have a Trace32 instance ready"
 
 generate_R() {
   extra_args=
-  [ "$1" = "FLASH" ] && \
+  script="mkdata.py"
+  if [ "$1" = "FLASH" ]; then
     extra_args="
-                  --c0-on-local '$TRACES_DIR/c0-on-local.bin' \
+                  --c0-on-local '$TRACES_DIR/c0-on-local.bin' \\
                   --c1-on-local '$TRACES_DIR/c1-on-local.bin'
     "
+    script="mkcontrol.py"
+  elif [ "$1" = "H" ]; then
+    extra_args="
+                  --output-json '$TRACES_DIR/$TYPE.json'
+    "
+  fi
   echo "
   ========= To generate the images ==========
-  '$(pwd)/scripts/mkcontrol.py' \
-                  --c0-off $TRACES_DIR/c0-off.bin' \
-                  --c0-on '$TRACES_DIR/c0-on.bin' \
-                  --c1-off '$TRACES_DIR/c1-off.bin' \
-                  --c1-on '$TRACES_DIR/c1-on.bin' \
-                  --kdbv '$KDBV' \
-                  --kcfg '$BUILD_DIR/$1/c0-off/gen/app/partos/0/dbs/task_$1_kcfg.ks' \
-                  --kapp '$BUILD_DIR/$1/c0-off/gen/app/config/kapp.ks' \
-                  --output-dir '$OUTDIR/$TYPE' --task=$1 --stats \
-                  $extra_args
+  '$(pwd)/scripts/$script' \\
+                  --c0-off '$TRACES_DIR/c0-off.bin' \\
+                  --c0-on '$TRACES_DIR/c0-on.bin' \\
+                  --c1-off '$TRACES_DIR/c1-off.bin' \\
+                  --c1-on '$TRACES_DIR/c1-on.bin' \\
+                  --kdbv '$KDBV' \\
+                  --kcfg '$BUILD_DIR/$1/c0-off/gen/app/partos/0/dbs/task_$1_kcfg.ks' \\
+                  --kapp '$BUILD_DIR/$1/c0-off/gen/app/config/kapp.ks' \\
+                  --output-dir '$OUTDIR/$TYPE' --task=$1 --stats \\
+                  --product '$PRODUCT'\\
+                  \\$extra_args
 
    cd '$OUTDIR/$TYPE'
    R --no-save < plot.R
@@ -132,60 +140,12 @@ elif [ "x$TYPE" = x"flash2" ]; then
 elif [ "x$TYPE" = x"G" ]; then
   run_G
   generate_R "G"
-  echo "
-  ========= To generate the images ==========
-   '$(pwd)/scripts/mkdata.py' \
-                  --c0-off '$TRACES_DIR/c0-off.bin' \
-                  --c0-on '$TRACES_DIR/c0-on.bin' \
-                  --c1-off '$TRACES_DIR/c1-off.bin' \
-                  --c1-on '$TRACES_DIR/c1-on.bin' \
-                  --kdbv '$KDBV' \
-                  --kcfg '$BUILD_DIR/G/c0-off/gen/app/partos/0/dbs/task_G_kcfg.ks' \
-                  --kapp '$BUILD_DIR/G/c0-off/gen/app/config/kapp.ks' \
-                  --output-dir '$OUTDIR/G' --task=G --stats
-   cd '$OUTDIR/G'
-   R --no-save < plot.R
-  ===========================================
-  "
 elif [ "x$TYPE" = x"H" ]; then
-  run_H
+  #run_H
   generate_R "H"
-  echo "
-  ========= To generate the images ==========
-   '$(pwd)/scripts/mkdata.py' \
-                  --c0-off '$TRACES_DIR/c0-off.bin' \
-                  --c0-on '$TRACES_DIR/c0-on.bin' \
-                  --c1-off '$TRACES_DIR/c1-off.bin' \
-                  --c1-on '$TRACES_DIR/c1-on.bin' \
-                  --kdbv '$KDBV' \
-                  --kcfg '$BUILD_DIR/H/c0-off/gen/app/partos/0/dbs/task_H_kcfg.ks' \
-                  --kapp '$BUILD_DIR/H/c0-off/gen/app/config/kapp.ks' \
-                  --output-dir '$OUTDIR/H' --task=H \
-                  --stats --output-json '$TRACES_DIR/H.json'
-   cd '$OUTDIR/H'
-   R --no-save < plot.R
-  ===========================================
-  "
 elif [ "x$TYPE" = x"Hsram" ]; then
   run_Hsram
-  generate_R "Hsram"
-  echo "
-  ========= To generate the images ==========
-   '$(pwd)/scripts/mkdata.py' \
-                  --c0-off '$TRACES_DIR/c0-off.bin' \
-                  --c0-on '$TRACES_DIR/c0-on.bin' \
-                  --c1-off '$TRACES_DIR/c1-off.bin' \
-                  --c1-on '$TRACES_DIR/c1-on.bin' \
-                  --kdbv '$KDBV' \
-                  --kcfg '$BUILD_DIR/H/c0-off/gen/app/partos/0/dbs/task_H_kcfg.ks' \
-                  --kapp '$BUILD_DIR/H/c0-off/gen/app/config/kapp.ks' \
-                  --output-dir '$OUTDIR/Hsram' --task=H \
-                  --stats --output-json '$TRACES_DIR/Hsram.json'
-   cd '$OUTDIR/Hsram'
-   R --no-save < plot.R
-  ===========================================
-  "
-
+  generate_R "H"
 else
   echo "*** Unknown argument '$TYPE'"
   exit 1

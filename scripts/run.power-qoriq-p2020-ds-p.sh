@@ -38,44 +38,31 @@ run() {
   "$RUN_TRACE32_HOOK" "$build_dir/program.elf" "$core" "$out"
 }
 
+not_supported() {
+  echo "*** $1 is not supported for $PRODUCT" > /dev/stderr
+  exit 1
+}
+
 run_flash() {
-  #   Task  Core C0  C1  Local Out
-  run FLASH 0    OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
-  run FLASH 0    OFF ON  ON    "$TRACES_DIR/c0-on-local.bin"
-  run FLASH 0    OFF ON  OFF   "$TRACES_DIR/c0-on.bin"
-  run FLASH 1    OFF OFF OFF   "$TRACES_DIR/c1-off.bin"
-  run FLASH 1    ON  OFF ON    "$TRACES_DIR/c1-on-local.bin"
-  run FLASH 1    ON  OFF OFF   "$TRACES_DIR/c1-on.bin"
+  not_supported "flash"
 }
 
 run_flash2() {
-  echo "*** Flash2 is not supported for $PRODUCT" > /dev/stderr
-  exit 1
+  not_supported "flash2"
 }
 
 run_G() {
   #   Task Core  C0  C1  Local Out
   run G    0     OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
   run G    0     OFF ON  OFF   "$TRACES_DIR/c0-on.bin"
-  run G    1     OFF OFF OFF   "$TRACES_DIR/c1-off.bin"
-  run G    1     ON  OFF OFF   "$TRACES_DIR/c1-on.bin"
 }
 
 run_H() {
   #   Task Core  C0  C1  Local Out
   run H    0     OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
-  #run H    1     OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
   run H    0     OFF ON  OFF   "$TRACES_DIR/c0-on.bin"
-  run H    1     OFF OFF OFF   "$TRACES_DIR/c1-off.bin"
-  run H    1     ON  OFF OFF   "$TRACES_DIR/c1-on.bin"
 }
 
 run_Hsram() {
-  #   Task Core  C0  C1  Local Out
- # run H    0     OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
- # run H    0     OFF ON  OFF   "$TRACES_DIR/c0-on.bin"
- # run H    1     OFF OFF OFF   "$TRACES_DIR/c1-off.bin"
- # run H    1     ON  OFF OFF   "$TRACES_DIR/c1-on.bin"
-  echo "*** Hsram is not supported for $PRODUCT" > /dev/stderr
-  exit 1
+  not_supported "Hsram"
 }

@@ -162,13 +162,26 @@ static void wait_practise(const int delay_s)
  * Make Trace32 go to the next breakpoint.
  * This synchronouly wait for the execution to complete, WITHOUT TIMEOUT.
  */
-static void next(void)
+static int next(void)
 {
-  const int ret = T32_Go();
+  uint32_t pp;
+  char symbol[0xfc];
+  int ret = T32_Go();
   if (ret != T32_OK)
   { DIE(ret, "Failed to advance after breakpoint"); }
   printf("Going to next breakpoint..."); fflush(stdout);
   wait_exec(5);
+  ret = T32_ReadPP(&pp);
+  if (ret != T32_OK)
+  { ERR("Failed to retrieve curent program pointer. Error code: %d", ret); }
+  ret = T32_GetSymbolFromAddress(symbol, pp, (int)0xfc);
+  if (ret != T32_OK)
+  { ERR("Failed to retrieve curent function symbol. Error code: %d", ret); }
+  printf("Currently at %s. ", symbol); fflush(stdout);
+
+  if(! strcmp(symbol, "em_raise") || ! strcmp(symbol, "em_early_raise"))
+  { printf("\n"); return 1; }
+  else return 0;
 }
 
 /**
@@ -261,16 +274,14 @@ int main(const int argc, const char *const argv[argc])
   /* Make sure the board is reset... otherwise it may not work... */
   //in_target_reset();
 
-  /* At this point, we are waiting at a breakpoint (startup). */
-  next();
-  /* Now, we should be at k2_init. The next one will be em_raise() */
-  next();
+  /* At this point, we are waiting at breakpoints, and check each time if we reached an error function.*/
+  while(! next()){ }
 
   /* Okay, at this point trace32 is at the em_raise breakpoint. First check
    * that the error code is the one we expect from normal termination: */
   const uint32_t error = read_u32("error_id");
   if (error != 0x00030009)
-  { DIE(-1, "Error ID expected is '0x%x' but we have '0x%x'", 0x00030009, error) ; }
+  { DIE(-1, "Error ID expected is '0x%08X' but we have '0x%08X'", 0x00030009, error); }
 
   /* Now, retrieve the address of the buffer holding measures */
   const uint32_t address = read_u32("&k2_stubborn_measures");
@@ -278,7 +289,7 @@ int main(const int argc, const char *const argv[argc])
   /* Retrieve the profiling buffer in-memory */
   ret = T32_ReadMemory(address, 0x0, BUFFER, sizeof(BUFFER));
   if (ret != T32_OK)
-  { DIE(ret, "Failed to read memory from address 0x%x", address); }
+  { DIE(ret, "Failed to read memory from address 0x%08X", address); }
 
   /* And finally, dump the profiling buffer to the local filesystem */
   FILE *const file = fopen(output, "wb");

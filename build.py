@@ -7,6 +7,8 @@ from string import Template
 import subprocess
 import sys
 
+env = os.environ
+
 TOP_DIR = Path(__file__).parent.resolve()
 PSY_DIR = TOP_DIR / "psy"
 SRC_DIR = TOP_DIR / "src"
@@ -58,6 +60,16 @@ COMPILE_CONFIG_HJSON_TEMPLATE = """
 }
 """
 
+LINK_CONFIG_HJSON_TEMPLATE = """
+{
+    link_options: {
+      ldflags: [
+        "-Xunused-sections-list"
+      ]
+    }
+}
+"""
+
 PSYMODULE_CONFIG_HJSON_TEMPLATE = """
 {
     psymodule: {
@@ -89,13 +101,16 @@ class Help:
     PRODUCT = "Name of the ASTERIOS RTK Product"
 
 def getopts(argv):
+    p2020 = env.get("P2020", "power-mpc5777m-evb")
+    mpc5777m = env.get("MPC5777M", "power-quoriq-ds-p")
     parser = argparse.ArgumentParser(description='Corunners builder')
     parser.add_argument("--psyko", "-P", type=Path,
                         help=Help.PSYKO, required=True)
     parser.add_argument("--rtk-dir", "-K", type=Path,
                         help=Help.RTK_DIR, required=True)
     parser.add_argument("--product", "-p", type=str,
-                        help=Help.PRODUCT, default="power-mpc5777m-evb")
+                        help=Help.PRODUCT,  required=True,
+                        choices=[p2020,mpc5777m])
     parser.add_argument("--corunner-id", "-C", type=int, choices=[0, 1, 2],
                         action="append", help=Help.CORUNNER_ID, default=[])
     parser.add_argument("--task", "-T", type=str, choices=["H", "G", "FLASH"],
@@ -135,7 +150,6 @@ def gen_corunner_config(output_filename, identifier, symbol, object_file):
         "corunner_object": str(object_file)
     })
 
-
 def gen_corunner_source(output_filename, symbol, *, sram=False):
     cmd = [sys.executable, TOP_DIR / "scripts" / "gen-corunner.py", symbol]
     if sram:
@@ -152,7 +166,6 @@ def get_sources(task_name):
         SRC_DIR / "filter.c",
         SRC_DIR / "filter2.c",
     ]
-    asm_sources = []
     psy_sources = [PSY_DIR / f"task_{task_name}.psy"]
     if task_name != "FLASH":
         c_sources += [
@@ -184,6 +197,7 @@ def main(argv):
         ag_config,
     ]
     compile_config = args.build_dir / "compile.hjson"
+    link_config = args.build_dir / "link.hjson"
     psymodule_config = args.build_dir / "psymodule.hjson"
     gen_agent_config(ag_config, f"task_{args.task}", args.core)
     for corunner in args.corunner_id:
@@ -191,6 +205,7 @@ def main(argv):
         co_obj = args.build_dir / f"corunner_{corunner}.asm"
         use_sram = corunner == 0
         symbol = f"co_runner_sram{corunner}" if use_sram else f"co_runner_flash{corunner}"
+
         app_configs.append(co_config)
         sources["asm"].append(co_obj)
         gen_corunner_config(co_config, corunner, symbol, object_of(co_obj))
@@ -201,8 +216,11 @@ def main(argv):
         gen_agent_config(stub_config, f"sends_to_task_{args.task}", args.core)
         app_configs.append(stub_config)
 
+    app_configs.append(link_config)
+
     write_template(compile_config, COMPILE_CONFIG_HJSON_TEMPLATE, {})
     write_template(psymodule_config, PSYMODULE_CONFIG_HJSON_TEMPLATE, {})
+    write_template(link_config, LINK_CONFIG_HJSON_TEMPLATE, {})
 
 
 
@@ -211,7 +229,6 @@ def main(argv):
     # with a convenient access to global variables such as the path to the
     # compiler and the path to the RTK.
     def psyko(*cmd_args):
-        env = os.environ
         env.pop("PLACE_CO_RUNNERS_LOCALLY", None)
         env["CORE_USED"] = f"{args.core}"
         if args.local_corunners:
