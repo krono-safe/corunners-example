@@ -46,14 +46,14 @@ pdf(file="out.pdf")
 par(mfrow=c(${rows},${cols}), mar=c(3,3,1,1))
 """
 
-EA_R_TEMPATE = """
+EA_R_TEMPLATE = """
 # For EA ${ea} ##############################
 result <- fromJSON(file = "${ea}.json")
 data <- as.data.frame(result)
 
 boxplot(
         values~sample,data=data,
-        main=expression(${ea[0]}[${ea[1:]}] ~ "(n=${n})"),
+        main=expression(${ea0}[${ea1_}] ~ "(n=${n})"),
         xaxt="n",
         cex.lab=1.2,
         col=gray.colors(2,rev=T,start=0.2,end=0.7,alpha=0.4),
@@ -67,18 +67,18 @@ axis(1,
      tick=T , cex=0.3)
 abline(v=${line}.5,lty=1, col="grey")
 
-lvl <- levels(data$sample)
-props <- summary(data$sample) / nrow(data)
+lvl <- levels(data$$sample)
+props <- summary(data$$sample) / nrow(data)
 
 for (i in 1:length(lvl)) {{
     l <- lvl[i]
-    v <- data[ data$sample==l, "values" ]
+    v <- data[ data$$sample==l, "values" ]
     j <- jitter(rep(i, length(v)), amount=props[i]/2)
     points(j, v, pch=20, col=rgb(0,0,0,0.7))
 }}
 """
 
-R_SCRIT_FOOTER_TEMPATE = """
+R_SCRIPT_FOOTER_TEMPLATE = """
 # Total n: ${ns} (should be 1024)
 dev.off()\n
 """
@@ -127,19 +127,18 @@ def getopts(argv):
 
 
 def gen_r_script(data, layout, out_dir, asym_cores):
-  def complete_script(template, context):
-    global R_SCRIPT
-
-    R_SCRIPT += Template(template).substitute(context)
+    def complete_script(template, context):
+        global R_SCRIPT
+        R_SCRIPT += Template(template).substitute(context)
 
     rows, cols = check_layout(layout)
     complete_script(R_SCRIPT_HEADER_TEMPLATE, {"rows": rows,
                                                "cols": cols})
     ns = 0
     if asym_cores:
-      sets = 4
+        sets = 4
     else:
-      sets = 2
+        sets = 2
 
     for row in layout:
         for ea in row:
@@ -150,13 +149,15 @@ def gen_r_script(data, layout, out_dir, asym_cores):
             n = int(len(data[ea]["values"]) / sets)
             ns += n
             complete_script(EA_R_TEMPLATE, {"ea": ea,
+                                            "ea0": ea[0],
+                                            "ea1_": ea[1:],
                                             "n": n,
-                                            "line": sets/2})
+                                            "line": int(sets/2)})
 
     complete_script(R_SCRIPT_FOOTER_TEMPLATE, {"ns": ns})
     out_dir.mkdir(parents=True, exist_ok=True)
     with open(out_dir / "plot.R", "w") as stream:
-        stream.write(SCRIPT)
+        stream.write(R_SCRIPT)
 
 
 def gen_stats(data, asym_cores, cores, tex_name):
