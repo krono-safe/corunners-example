@@ -89,6 +89,20 @@ PSYMODULE_CONFIG_HJSON_TEMPLATE = """
 }
 """
 
+CO_RUNNER_SOURCE_TEMPLATE = """
+typedef unsigned int t_ast_uint32;
+const t_ast_uint32 *const CO_PTR_START = (const t_ast_uint32 *)(${START});
+const t_ast_uint32 *const CO_PTR_END = (const t_ast_uint32 *)(${END});
+
+void ${SYMBOL}(void) {
+   const t_ast_uint32 *ptr = CO_PTR_START;
+  for (;;) {
+   volatile char c = *ptr;
+    if (++ptr > CO_PTR_END) ptr = CO_PTR_START;
+  }
+}
+"""
+
 class Help:
     RTK_DIR = "Path to the ASTERIOS RTK"
     CORUNNER_ID = "ID of the co-runner to enable; can be specified multiple times"
@@ -150,15 +164,23 @@ def gen_corunner_config(output_filename, identifier, symbol, object_file):
         "corunner_object": str(object_file)
     })
 
-def gen_corunner_source(output_filename, symbol, *, sram=False):
-    cmd = [sys.executable, TOP_DIR / "scripts" / "gen-corunner.py", symbol]
-    if sram:
-        cmd += ["--sram"]
+def gen_corunner_source(output_filename, symbol, cor_type,
+                        start=None, end=None, sram=False):
+    if cor_type == 'jump':
+        cmd = [sys.executable, TOP_DIR / "scripts" / "gen-corunner.py", symbol]
+        if sram:
+            cmd += ["--sram"]
+        else:
+            cmd += ["--jump", "2048"]
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True) as proc:
+            with open(output_filename, "w") as fileh:
+                fileh.write(proc.stdout.read())
     else:
-        cmd += ["--jump", "2048"]
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True) as proc:
-        with open(output_filename, "w") as fileh:
-            fileh.write(proc.stdout.read())
+        write_template(output_filename, CO_RUNNER_SOURCE_TEMPLATE, {
+            "START": start,
+            "END": end,
+            "SYMBOL": symbol
+        })
 
 def get_sources(task_name):
     c_sources = [
@@ -182,6 +204,8 @@ def get_sources(task_name):
 
 def main(argv):
     args = getopts(argv)
+    cor_type = "mem_read"
+    #cor_type = "jump"
 
     def object_of(source_filename, extension = ".o"):
         return args.build_dir / (source_filename.name + extension)
@@ -202,14 +226,22 @@ def main(argv):
     gen_agent_config(ag_config, f"task_{args.task}", args.core)
     for corunner in args.corunner_id:
         co_config = args.build_dir / f"corunner_{corunner}.hjson"
-        co_obj = args.build_dir / f"corunner_{corunner}.asm"
+        co_file = args.build_dir / f"corunner_{corunner}"
         use_sram = corunner == 0
         symbol = f"co_runner_sram{corunner}" if use_sram else f"co_runner_flash{corunner}"
+        assert(cor_type in ['mem_read', 'jump'], "unknown corunner type")
+        if cor_type == 'mem_read':
+            co_file = co_file.with_suffix('.c')
+            sources["c"].append(co_file)
+            gen_corunner_source(co_file, symbol, cor_type, start="0x231044", end="0x233753")
+        else:
+            co_file = co_file.with_suffix('.asm')
+            sources["asm"].append(co_file)
+            #gen_corunner_source(co_file, symbol, cor_type, sram=use_sram)
+            gen_corunner_source(co_file, symbol, cor_type)
 
         app_configs.append(co_config)
-        sources["asm"].append(co_obj)
-        gen_corunner_config(co_config, corunner, symbol, object_of(co_obj))
-        gen_corunner_source(co_obj, symbol, sram=use_sram)
+        gen_corunner_config(co_config, corunner, symbol, object_of(co_file))
 
     if args.task != "FLASH":
         stub_config = args.build_dir / "stub.hjson"
