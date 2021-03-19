@@ -92,6 +92,7 @@ source "$(pwd)/scripts/run.$PRODUCT.sh"
 TRACES_DIR="$(pwd)/traces/${TYPE}"
 BUILD_DIR="$(pwd)/build/${TYPE}"
 OUTDIR="out_$PRODUCT"
+sym="--symetric"
 
 ###############################################################################
 
@@ -123,6 +124,7 @@ generate_R() {
                   --kapp '$BUILD_DIR/$1/c0-off/gen/app/config/kapp.ks' \\
                   --output-dir '$OUTDIR/$TYPE' --task=$1 --stats \\
                   --product '$PRODUCT'\\
+                  $sym \\
                   \\$extra_args
 
    cd '$OUTDIR/$TYPE'
@@ -141,7 +143,7 @@ elif [ "x$TYPE" = x"G" ]; then
   run_G
   generate_R "G"
 elif [ "x$TYPE" = x"H" ]; then
-  #run_H
+  run_H
   generate_R "H"
 elif [ "x$TYPE" = x"Hsram" ]; then
   run_Hsram

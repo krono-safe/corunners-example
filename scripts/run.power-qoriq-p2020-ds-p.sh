@@ -55,12 +55,18 @@ run_G() {
   #   Task Core  C0  C1  Local Out
   run G    0     OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
   run G    0     OFF ON  OFF   "$TRACES_DIR/c0-on.bin"
+  run G    1     OFF OFF OFF   "$TRACES_DIR/c1-off.bin"
+  run G    1     OFF OFF OFF   "$TRACES_DIR/c1-on.bin"
+  #sym=""
 }
 
 run_H() {
   #   Task Core  C0  C1  Local Out
   run H    0     OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
   run H    0     OFF ON  OFF   "$TRACES_DIR/c0-on.bin"
+  run H    1     OFF OFF OFF   "$TRACES_DIR/c1-off.bin"
+  run H    1     ON OFF OFF   "$TRACES_DIR/c1-on.bin"
+  #sym=""
 }
 
 run_Hsram() {
