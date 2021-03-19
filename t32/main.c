@@ -177,7 +177,7 @@ static int next(void)
   ret = T32_GetSymbolFromAddress(symbol, pp, (int)0xfc);
   if (ret != T32_OK)
   { ERR("Failed to retrieve curent function symbol. Error code: %d", ret); }
-  printf("Currently at %s. ", symbol); fflush(stdout);
+  printf("Currently at %s (%08X). ", symbol, pp); fflush(stdout);
 
   if(! strcmp(symbol, "em_raise") || ! strcmp(symbol, "em_early_raise"))
   { printf("\n"); return 1; }
