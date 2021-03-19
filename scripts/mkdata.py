@@ -121,12 +121,13 @@ def getopts(argv):
     parser.add_argument("--task", choices=["G", "H"], required=True)
     parser.add_argument("--stats", action='store_true')
     parser.add_argument("--output-json", type=Path)
+    parser.add_argument("--symetric", '-s', action='store_true')
     parser.add_argument("--product", "-p", type=str, required=True,
                         choices=[P2020,MPC5777M])
     return parser.parse_args(argv[1:])
 
 
-def gen_r_script(data, layout, out_dir, asym_cores):
+def gen_r_script(data, layout, out_dir, symetric):
     def complete_script(template, context):
         global R_SCRIPT
         R_SCRIPT += Template(template).substitute(context)
@@ -135,7 +136,7 @@ def gen_r_script(data, layout, out_dir, asym_cores):
     complete_script(R_SCRIPT_HEADER_TEMPLATE, {"rows": rows,
                                                "cols": cols})
     ns = 0
-    if asym_cores:
+    if symetric:
         sets = 4
     else:
         sets = 2
@@ -160,7 +161,7 @@ def gen_r_script(data, layout, out_dir, asym_cores):
         stream.write(R_SCRIPT)
 
 
-def gen_stats(data, asym_cores, cores, tex_name):
+def gen_stats(data, symetric, cores, tex_name):
     text = Template(LATEX_HEADER_TEMPLATE).substitute({"core0": cores[0],
                                                        "core1": cores[1]})
     for ea, info in sorted(data.items()):
@@ -168,7 +169,7 @@ def gen_stats(data, asym_cores, cores, tex_name):
             C0_OFF: 0.0,
             C0_ON: 0.0,
         }
-        if asym_cores:
+        if symetric:
             values[C1_OFF] = 0.0
             values[C1_ON] = 0.0
 
@@ -184,7 +185,7 @@ def gen_stats(data, asym_cores, cores, tex_name):
         else:
             text += f"{r0:.3f}"
         text += ' & '
-        if asym_cores:
+        if symetric:
             r1 = calc(values[C1_OFF], values[C1_ON])
             text += f"{values[C1_OFF]:.3f} & {values[C1_ON]:.3f} &"
             if r1 > 0.01:
@@ -233,11 +234,10 @@ def main(argv):
     }
 
     if args.product == P2020:
-        asym_cores = False
         cores = [0, 1]
     else:
-        asym_cores = True
         cores = [1, 2]
+    if args.symetric:
         data[C1_OFF] = decode_file(args.c1_off)
         data[C1_ON] =  decode_file(args.c1_on)
 
@@ -248,16 +248,15 @@ def main(argv):
         C0_ON: (f"Core {cores[0]}", "ON", False),
     }
 
-    if asym_cores:
+    if args.symetric:
         groups[C1_OFF] = ("Core {cores[1]}", "OFF", False)
         groups[C1_ON] = ("Core {cores[1]", "ON", False)
 
     jdata = gen_json_data(data, ea_to_name, args.output_dir, groups)
-    gen_r_script(jdata, layout, args.output_dir, asym_cores)
+    gen_r_script(jdata, layout, args.output_dir, args.symetric)
 
     if args.stats:
-        #gen_stats(jdata, asym_cores, cores, args.output_dir.resolve() / f"stats_{args.output_dir.stem}")
-        gen_stats(jdata, asym_cores, cores, args.output_dir.resolve() / f"stats_{args.task}")
+        gen_stats(jdata, args.symetric, cores, args.output_dir.resolve() / f"stats_{args.task}")
     if args.output_json is not None:
         with open(args.output_json, "w") as outp:
             json.dump(jdata, outp, indent=2)
