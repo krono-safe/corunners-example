@@ -90,15 +90,32 @@ PSYMODULE_CONFIG_HJSON_TEMPLATE = """
 """
 
 CO_RUNNER_SOURCE_TEMPLATE = """
-typedef unsigned int t_ast_uint32;
-const t_ast_uint32 *const CO_PTR_START = (const t_ast_uint32 *)(${START});
-const t_ast_uint32 *const CO_PTR_END = (const t_ast_uint32 *)(${END});
+const unsigned char *const CO_PTR_START = (const unsigned char *)(${START});
+const unsigned char *const CO_PTR_END = (const unsigned char *)(${END});
 
 void ${SYMBOL}(void) {
-   const t_ast_uint32 *ptr = CO_PTR_START;
+   const unsigned char *ptr = CO_PTR_START;
+   volatile char c[16] = *ptr;
   for (;;) {
-   volatile char c = *ptr;
-    if (++ptr > CO_PTR_END) ptr = CO_PTR_START;
+    c[0] = ptr[15];
+    c[1] = ptr[0];
+    c[2] = ptr[6];
+    c[3] = ptr[1];
+    c[4] = ptr[14];
+    c[5] = ptr[5];
+    c[6] = ptr[8];
+    c[7] = ptr[11];
+    c[8] = ptr[2];
+    c[9] = ptr[13];
+    c[10] = ptr[3];
+    c[11] = ptr[10];
+    c[12] = ptr[9];
+    c[13] = ptr[7];
+    c[14] = ptr[4];
+    c[15] = ptr[12];
+
+    ptr += 16;
+    if (ptr > CO_PTR_END) { ptr = CO_PTR_START; }
   }
 }
 """
@@ -229,7 +246,7 @@ def main(argv):
         co_file = args.build_dir / f"corunner_{corunner}"
         use_sram = corunner == 0
         symbol = f"co_runner_sram{corunner}" if use_sram else f"co_runner_flash{corunner}"
-        assert(cor_type in ['mem_read', 'jump'], "unknown corunner type")
+        assert cor_type in ['mem_read', 'jump'], "unknown corunner type"
         if cor_type == 'mem_read':
             co_file = co_file.with_suffix('.c')
             sources["c"].append(co_file)
