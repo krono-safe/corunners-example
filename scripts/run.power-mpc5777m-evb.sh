@@ -8,6 +8,7 @@ run() {
   co_2="$5"
   local_corunners="$6"
   out="$7"
+  sram="${8:-}"
   build_dir=$(basename -- "$out")
   build_dir="$BUILD_DIR/${task}/${build_dir%.*}"
   extra_opts=
@@ -22,6 +23,11 @@ run() {
   fi
   if [ "$co_2" = "ON" ]; then
     extra_opts="--corunner-id=2 $extra_opts"
+  fi
+  if [ -n "$sram" ]; then
+    for c in $sram; do
+      extra_opts="--use-sram=$c $extra_opts"
+    done
   fi
 
   echo "####################################################################"
@@ -79,9 +85,9 @@ run_H() {
 }
 
 run_Hsram() {
-  #   Task Core  C0  C1  C2  Local Out
+  #   Task Core  C0  C1  C2  Local Out                        sram
   run H    1     OFF OFF OFF OFF   "$TRACES_DIR/c0-off.bin"
-  run H    1     ON  OFF ON  OFF   "$TRACES_DIR/c0-on.bin"
+  run H    1     ON  OFF ON  OFF   "$TRACES_DIR/c0-on.bin"    0
   run H    2     OFF OFF OFF OFF   "$TRACES_DIR/c1-off.bin"
-  run H    2     ON  ON  OFF OFF   "$TRACES_DIR/c1-on.bin"
+  run H    2     ON  ON  OFF OFF   "$TRACES_DIR/c1-on.bin"    0
 }
