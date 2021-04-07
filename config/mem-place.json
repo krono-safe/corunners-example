@@ -1,0 +1,48 @@
+{
+  "elements": [
+    {
+      "names": [
+        "@CORUNNER_SYMBOL@"
+      ],
+      "type": "corunner",
+      "sections": [
+        {
+          "names": [
+            "DATA",
+            "RODATA",
+            "BSS"
+          ],
+          @CORUNNER_DATA@
+        },
+        {
+          "names": [
+            "TEXT"
+          ],
+          @CORUNNER_TEXT@
+        }
+      ]
+    },
+    {
+      "names": [
+        "@TASK_MODULES@"
+      ],
+      "type": "task",
+      "sections": [
+        {
+          "names": [
+            "DATA",
+            "RODATA",
+            "BSS"
+          ],
+          @TASK_DATA@
+        },
+        {
+          "names": [
+            "TEXT"
+          ],
+          @TASK_TEXT@
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+	"elements": [
+		{
+			"names": [
+				"co_runner_sram1"
+			],
+			"type": "corunner",
+			"sections": [
+				{
+					"names": [
+						"DATA",
+						"RODATA",
+						"BSS"
+					],
+					"address": 20447232
+				},
+				{
+					"names": [
+						"TEXT"
+					],
+					"address": 33554432
+				}
+			]
+		},
+		{
+			"names": [
+				"task_H",
+				"sends_to_task_H"
+			],
+			"type": "task",
+			"sections": [
+				{
+					"names": [
+						"DATA",
+						"RODATA",
+						"BSS"
+					],
+					"region": "ddr"
+				},
+				{
+					"names": [
+						"TEXT"
+					],
+					"region": "ddr"
+				}
+			]
+		}
+	]
+}
