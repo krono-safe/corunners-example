@@ -4,13 +4,12 @@ import argparse
 from pathlib import Path
 import json
 import sys
-import os
-from string import Template
+from os import environ
 
-from scriptutil import get_nodes_to_ea, decode_file, gen_json_data, calc
+from scriptutil import get_nodes_to_ea, decode_file, gen_json_data, calc, substi_temp
 
-P2020 = os.environ.get("P2020","power-qoriq-p2020-ds-p")
-MPC5777M = os.environ.get("MPC5777M",  "power-mpc5777m-evb")
+P2020 = environ.get('P2020','power-qoriq-p2020-ds-p')
+MPC5777M = environ.get('MPC5777M',  'power-mpc5777m-evb')
 
 C0_OFF = "Task: C0, Corunner: OFF"
 C0_ON = "Task: C0, Corunner: ON"
@@ -121,7 +120,7 @@ def getopts(argv):
     parser.add_argument("--task", choices=["G", "H"], required=True)
     parser.add_argument("--stats", action='store_true')
     parser.add_argument("--output-json", type=Path)
-    parser.add_argument("--symetric", '-s', action='store_true')
+    parser.add_argument('--symetric', '-s', action='store_true')
     parser.add_argument("--product", "-p", type=str, required=True,
                         choices=[P2020,MPC5777M])
     return parser.parse_args(argv[1:])
@@ -130,7 +129,7 @@ def getopts(argv):
 def gen_r_script(data, layout, out_dir, symetric):
     def complete_script(template, context):
         global R_SCRIPT
-        R_SCRIPT += Template(template).substitute(context)
+        R_SCRIPT += substi_temp(template, context)
 
     rows, cols = check_layout(layout)
     complete_script(R_SCRIPT_HEADER_TEMPLATE, {"rows": rows,
@@ -162,8 +161,8 @@ def gen_r_script(data, layout, out_dir, symetric):
 
 
 def gen_stats(data, symetric, cores, tex_name):
-    text = Template(LATEX_HEADER_TEMPLATE).substitute({"core0": cores[0],
-                                                       "core1": cores[1]})
+    text = substi_temp(LATEX_HEADER_TEMPLATE, {"core0": cores[0],
+                                               "core1": cores[1]})
     for ea, info in sorted(data.items()):
         values = {
             C0_OFF: 0.0,

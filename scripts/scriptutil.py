@@ -5,8 +5,32 @@ from collections import namedtuple
 import tempfile
 import struct
 import subprocess
+from string import Template
 
 EA = namedtuple("EA", ["source", "target"])
+
+def load_json(f, s=False, o=True):
+    if s:
+        return json.loads(f)
+    if o:
+        with open(f, 'r') as jf:
+            return json.load(jf)
+    else:
+        return json.load(f)
+
+def dump_json(obj, f=None, s=False):
+    if s:
+        return json.dumps(obj, indent='\t')
+    with open(f, 'w') as jf:
+        json.dump(obj, jf, indent='\t')
+
+def substi_temp(template, context):
+    return Template(template).substitute(context)
+
+def write_template(output_filename, template, context):
+    output_filename.parent.mkdir(exist_ok=True, parents=True)
+    with open(output_filename, "w") as fileh:
+        fileh.write(substi_temp(template, context))
 
 def decode_file(input_file):
     sorted_data = dict()
@@ -166,3 +190,34 @@ def gen_json_data(data, ea_to_name, out_dir, groups):
 # https://en.wikipedia.org/wiki/Relative_change_and_difference
 def calc(ref, value):
     return (value - ref) / ref * 100.0
+
+def psyko(conf, *cmd_args):
+    cmd = [
+        conf['psyko'],
+        "-K", conf['rtk_dir'],
+        "--product", conf['product'],
+    ] + [*cmd_args]
+    print("[RUN] ", end='')
+    for item in cmd:
+        print(f"'{item}' ", end='')
+    print()
+
+    # Run psyko... This is run in an infinite loop to handle timeouts...
+    # This is especially annoying when you have a weak network connection and
+    # that you fail to request a License. Since running all tests to collect
+    # measures is quite slow, failing because of a timeout on such problems
+    # is quite unpleasant.
+    # So, in case of a network error (highly suggested by the timeout), we
+    # just try again. It's kind of a kludge, but actually saved to much
+    # time.
+    def run_cmd(cmd):
+        try:
+            ret = subprocess.run(
+                cmd, timeout=30, cwd=conf['cwd'], universal_newlines=True)
+            assert ret.returncode == 0, "Failed to run psyko"
+            return True
+        except subprocess.TimeoutExpired:
+            return False
+
+    while not run_cmd(cmd):
+        pass
