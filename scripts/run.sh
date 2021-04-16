@@ -15,12 +15,13 @@ TYPE="${TYPE:-}"
 PRODUCT="${PRODUCT:-}"
 P2020="${P2020:-power-qoriq-p2020-ds-p}"
 MPC5777M="${MPC5777M:-power-mpc5777m-evb}"
+ROOT=${ROOT:-`pwd`}
 
 usage() {
   echo "Usage: $0 -T H|G|flash|flash2|Hsram -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$P2020|$MPC5777M> [-h]
 
-  -p <psyko>    Path to the PsyC compiler
-  -T H|G|flash|flash2|Hsram
+  -P <psyko>    Path to the PsyC compiler
+  -T H|G|flash|flash2|Hsram|Hplaces
                 Type of run (required choice)
   -d <kdbv>     Path to the kdbv program
   -k <rtk_dir>  Path to the ASTERIOS RTK
@@ -91,8 +92,9 @@ source "$(pwd)/scripts/run.$PRODUCT.sh"
 
 TRACES_DIR="$(pwd)/traces/${TYPE}"
 BUILD_DIR="$(pwd)/build/${TYPE}"
-OUTDIR="out_$PRODUCT"
+OUTDIR="$ROOT/out_$PRODUCT"
 sym="--symetric"
+rm "$TRACES_DIR/times.log" || true
 
 ###############################################################################
 
@@ -101,36 +103,52 @@ echo "Make sure you have a Trace32 instance ready"
 generate_R() {
   extra_args=
   script="mkdata.py"
-  if [ "$1" = "FLASH" ]; then
-    extra_args="
-                  --c0-on-local '$TRACES_DIR/c0-on-local.bin' \\
-                  --c1-on-local '$TRACES_DIR/c1-on-local.bin'
+  if [ "$TYPE" = "Hplaces" ]; then
+    bins="
+                  --traces-dir '$TRACES_DIR' \\
     "
-    script="mkcontrol.py"
-  elif [ "$1" = "H" ]; then
     extra_args="
-                  --output-json '$TRACES_DIR/$TYPE.json'
+                  --core $2
     "
-  fi
-  echo "
-  ========= To generate the images ==========
-  '$(pwd)/scripts/$script' \\
+    script="mkplaces.py"
+    ref="$1$3-COFF"
+  else
+    bins="
                   --c0-off '$TRACES_DIR/c0-off.bin' \\
                   --c0-on '$TRACES_DIR/c0-on.bin' \\
                   --c1-off '$TRACES_DIR/c1-off.bin' \\
                   --c1-on '$TRACES_DIR/c1-on.bin' \\
-                  --kdbv '$KDBV' \\
-                  --kcfg '$BUILD_DIR/$1/c0-off/gen/app/partos/0/dbs/task_$1_kcfg.ks' \\
-                  --kapp '$BUILD_DIR/$1/c0-off/gen/app/config/kapp.ks' \\
-                  --output-dir '$OUTDIR/$TYPE' --task=$1 --stats \\
-                  --product '$PRODUCT'\\
-                  $sym \\
-                  \\$extra_args
-
-   cd '$OUTDIR/$TYPE'
-   R --no-save < plot.R
-  ===========================================
+    "
+    ref="c0-off"
+    case "$1" in
+      "FLASH")
+        extra_args="
+                      --c0-on-local '$TRACES_DIR/c0-on-local.bin' \\
+                      --c1-on-local '$TRACES_DIR/c1-on-local.bin'
+        "
+        script="mkcontrol.py"
+        ;;
+      "H")
+        extra_args="
+                      --output-json '$TRACES_DIR/$TYPE.json'
+        "
+        ;;
+    esac
+  fi
+  eval "
+  './scripts/$script' \\
+        \\$bins \\
+        --kdbv '$KDBV' \\
+        --kcfg '$BUILD_DIR/$1/$ref/gen/app/partos/0/dbs/task_$1_kcfg.ks' \\
+        --kapp '$BUILD_DIR/$1/$ref/gen/app/config/kapp.ks' \\
+        --output-dir '$OUTDIR/$TYPE' --task=$1 --stats \\
+        --product '$PRODUCT'\\
+        --timer '$timer' \\
+        $sym \\
+        \\$extra_args
   "
+   cd "$OUTDIR/$TYPE"
+   R --no-save < plot.R
 }
 
 if [ "x$TYPE" = x"flash" ]; then
@@ -148,6 +166,11 @@ elif [ "x$TYPE" = x"H" ]; then
 elif [ "x$TYPE" = x"Hsram" ]; then
   run_Hsram
   generate_R "H"
+elif [ "x$TYPE" = x"Hplaces" ]; then
+  sym=
+  run_places_H 0
+  ref=1
+  generate_R "H" 0 $ref
 else
   echo "*** Unknown argument '$TYPE'"
   exit 1
