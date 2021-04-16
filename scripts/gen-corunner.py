@@ -78,8 +78,8 @@ def sram_cor():
   print(f"{args.symbol}_loop:")
 
   for i in range(0, args.tablesize):
-    print(f"\tlwz r4,{(i-1)*args.stride}(r0)")
-    print(f"\tstw r4,{i*args.stride}(r3)")
+    print(f"\tlwz r4,{i*args.stride}(r0)")
+    print(f"\tstw r4,0(r3)")
     for j in range(0, args.nop):
       print("\tnop")
 
@@ -87,10 +87,10 @@ def sram_cor():
   print(f"""
 \t.bss
 \t.type global_data, @object
-\t.size global_data,{args.tablesize*args.stride}
+\t.size global_data,{args.stride}
 \t.align 2
 global_data:
-\t.space {args.tablesize*args.stride}
+\t.space {args.stride}
 """)
 
 def jump_cor():
