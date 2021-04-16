@@ -1,4 +1,7 @@
 {
+  "kdbv": "@KDBV@",
+  "memreport": "@MEMREPORT@",
+  "default_kmemory": "@KMEM_DEF@",
   "elements": [
     {
       "names": [
@@ -10,15 +13,10 @@
           "names": [
             "DATA",
             "RODATA",
-            "BSS"
-          ],
-          @CORUNNER_DATA@
-        },
-        {
-          "names": [
+            "BSS",
             "TEXT"
           ],
-          @CORUNNER_TEXT@
+          @CORUNNER_PLACE@
         }
       ]
     },
@@ -32,15 +30,10 @@
           "names": [
             "DATA",
             "RODATA",
-            "BSS"
-          ],
-          @TASK_DATA@
-        },
-        {
-          "names": [
+            "BSS",
             "TEXT"
           ],
-          @TASK_TEXT@
+          @TASK_PLACE@
         }
       ]
     }

@@ -19,11 +19,11 @@ def getopts(argv):
     parser.add_argument("--product", "-p", type=str,
                         help=Help.PRODUCT,  required=True,
                         choices=[P2020,MPC5777M])
-    parser.add_argument("--corunner-id", "-C", type=int, choices=[0, 1, 2],
+    parser.add_argument("--corunner-id", "-C", type=int, choices=CORES,
                         action="append", help=Help.CORUNNER_ID, default=[])
     parser.add_argument("--task", "-T", type=str, choices=["H", "G", "FLASH"],
                         help=Help.TASK, required=True)
-    parser.add_argument("--core", "-c", type=int, choices=[0, 1, 2],
+    parser.add_argument("--core", "-c", type=int, choices=CORES,
                         help=Help.CORE, required=True)
     parser.add_argument("--local-corunners", action='store_true',
                         help=Help.LOCAL_CORUNNERS)
@@ -77,9 +77,10 @@ def gen_corunner_source(output_filename, symbol, sram=dict()):
 
 def gen_kmem_final(default, config, memreport, kdbv, tasks, corunners=list()):
     config_json = load_json(config)
-    cmd = [sys.executable, TOP_DIR / 'scripts' / 'gen-kmem.py', '--memreport',
-        memreport, '--kdbv', kdbv, '--default_kmem', default, '--config', config]
+    cmd = [sys.executable, TOP_DIR / 'scripts' / 'gen-kmem.py', '--config', config]
     del_list = []
+    config_json['memreport'] = str(memreport)
+    config_json['default_kmemory'] = str(default)
     for el in config_json['elements']:
         if el['type'] == 'corunner':
             if corunners:
@@ -121,6 +122,9 @@ def get_sources(task_name):
 
 def main(argv):
     args = getopts(argv)
+
+    used_cores = args.corunner_id + [args.core]
+    args.corunner_id.sort()
 
     def object_of(source_filename, extension = ".o"):
         return args.build_dir / (source_filename.name + extension)
@@ -222,6 +226,21 @@ def main(argv):
                 for reg in def_memconf['kmemory']['regions'][1:]:
                     if reg['size'] > max_reg['size']:
                         max_reg = reg
+            if 'domains' not in max_reg.keys():
+                max_reg['domains'] = list()
+                out = cor_memconf[0]['domains'][0]['output_sections'][0]
+                out['physical_address'] = mar_reg['physical_address']
+            stacks = {obj['id']: obj
+                for obj in def_memconf['kmemory']['objects']
+                if obj['id'] in [f"core_{core}_co_runner_stack.c"
+                    for core in used_cores]}
+            for core in args.corunner_id:
+                stack = f"core_{core}_co_runner_stack.c"
+                for corunner in corunners:
+                   symbol = corunner if corunner[-1] == str(core) else ''
+
+                stacks[stack]['groups'] = [f'.stack_{symbol}']
+
             for cor in cor_memconf:
                 max_reg['domains'] += cor['domains']
                 def_memconf['kmemory']['groups'] += cor['groups']
