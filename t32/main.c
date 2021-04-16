@@ -11,8 +11,10 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #define ERR(Fmt, ...) fprintf(stderr, "*** " Fmt "\n", ## __VA_ARGS__)
+#define LOG(file, Fmt, ...) fprintf(file, "*** " Fmt "\n", ## __VA_ARGS__)
 #define DIE(Code, Fmt, ...) \
   do { \
     fprintf(stderr, "*** " Fmt " (error code: %i)\n", ## __VA_ARGS__, Code); \
@@ -239,18 +241,21 @@ static uint32_t read_u32(const char *const name)
 int main(const int argc, const char *const argv[argc])
 {
   /* Trivial getopts */
-  if (argc != 3)
+  if (argc != 4)
   {
-    ERR("Usage: %s <script.cmm> <output.bin>", argv[0]);
+    ERR("Usage: %s <script.cmm> <output.bin> <logfile>", argv[0]);
     return 1;
   }
   const char *const script = argv[1];
   const char *const output = argv[2];
+  const char *const logfile = argv[3];
+  struct timeval stop, start;
 
   /* Make sure we will (almost) always terminate the program by leaving T32 in
    * a clean state. */
   atexit(&cleanup);
   set_signal_handler(SIGINT);
+  set_signal_handler(SIGTERM);
 
   int ret;
 
@@ -274,8 +279,12 @@ int main(const int argc, const char *const argv[argc])
   /* Make sure the board is reset... otherwise it may not work... */
   //in_target_reset();
 
+  gettimeofday(&start, NULL);
   /* At this point, we are waiting at breakpoints, and check each time if we reached an error function.*/
   while(! next()){ }
+
+  //calculate the execution time of the task.
+  gettimeofday(&stop, NULL);
 
   /* Okay, at this point trace32 is at the em_raise breakpoint. First check
    * that the error code is the one we expect from normal termination: */
@@ -292,7 +301,7 @@ int main(const int argc, const char *const argv[argc])
   { DIE(ret, "Failed to read memory from address 0x%08X", address); }
 
   /* And finally, dump the profiling buffer to the local filesystem */
-  FILE *const file = fopen(output, "wb");
+  FILE *file = fopen(output, "wb");
   if (! file)
   {
     const int err = errno;
@@ -304,6 +313,11 @@ int main(const int argc, const char *const argv[argc])
     fclose(file);
     DIE(err, "Failed to write to '%s': %s", output, strerror(err));
   }
+  fclose(file);
+
+  file = fopen(logfile, "a");
+  LOG(file, "Execution_time for %s: %lu ms.\n", output,
+      (stop.tv_sec - start.tv_sec) * 1000 + (stop.tv_usec - start.tv_usec)/1000);
   fclose(file);
 
   return 0;
