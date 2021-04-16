@@ -1,4 +1,8 @@
 {
+	"kdbv": "~/Documents/repos/bsp0-qoriq-t1/build_core/kdbv",
+	"memreport": "~/Documents/repos/corunners-example/build/H/H/c0-on/gen/app/applink/memreport_out.ks",
+	"default_kmemory": "~/Documents/repos/corunners-example/build/H/H/c0-on/gen/app/applink/kmemory_out.json",
+	"out_kmemory": "~/Documents/repos/corunners-example/build/H/H/c0-on/kmemory_out.json",
 	"elements": [
 		{
 			"names": [
@@ -33,13 +37,8 @@
 					"names": [
 						"DATA",
 						"RODATA",
-						"BSS"
-					],
-					"region": "ddr"
-				},
-				{
-					"names": [
-						"TEXT"
+						"BSS",
+            "TEXT"
 					],
 					"region": "ddr"
 				}
