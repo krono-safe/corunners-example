@@ -5,11 +5,12 @@
 #  * the co_runners;
 #
 # Usage:
-#   python3 gen-kmem.py --config {json config file} --memreport {ks memreport file} --default_kmem {default kmemory json file}
+#   python3 gen-kmem.py --config {json config file} --memreport {ks memreport file} --default_kmemory {default kmemory json file}
 #
 # Notes:
 #   * The default kmemory will be overwritten. To avoid that, add --out_kmem to specify an other output file.
 #   * An exemple template for the json config file is available at /exemples/mem-place.json. In each sections, at least of address or region must be present. The names of the elements must be the task names for agents and the identifiers in the default kmem for the corunners.
+#  * Except the config file arguments, all options can be put in the config json. options specified as arguments will overwrite options specified in the config.
 #
 # Both the data and the text can be set separatly.
 
@@ -21,24 +22,35 @@ from scriptutil import load_db, load_json, dump_json
 from copy import deepcopy
 from pathlib import Path
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--config', nargs='?', type=argparse.FileType('r'), default='-')
-parser.add_argument('--memreport', type=Path, required=True)
-parser.add_argument('--default_kmem', type=Path, required=True)
-parser.add_argument('--out_kmem', type=Path)
-parser.add_argument("--kdbv", type=Path, required=True)
-args = parser.parse_args(sys.argv[1:])
-
-if not args.out_kmem:
-  args.out_kmem = args.default_kmem
-
 def del_all_list(l, rem):
   for el in l:
     rem.remove(el)
 
-memreport = load_db(args.kdbv, args.memreport)
-kmem = load_json(args.default_kmem)
+parser = argparse.ArgumentParser()
+parser.add_argument('--config', nargs='?', type=argparse.FileType('r'), default='-')
+parser.add_argument('--memreport', type=Path)
+parser.add_argument('--default_kmemory', type=Path)
+parser.add_argument('--out_kmemory', type=Path)
+parser.add_argument("--kdbv", type=Path)
+args = parser.parse_args(sys.argv[1:])
+
 config = load_json(args.config, o=False)
+
+try:
+  if not args.default_kmemory:
+    args.default_kmemory = config['default_kmemory']
+  if not args.memreport:
+    args.memreport = config['memreport']
+  if not args.kdbv:
+    args.kdbv = config['kdbv']
+except KeyError as e:
+  print(f"{e.args[0]} must be pased either in the config json or in program parameters!", file=stderr)
+
+if not args.out_kmemory:
+  args.out_kmemory = config.get('out_kmemory', args.default_kmemory)
+
+memreport = load_db(args.kdbv, args.memreport)
+kmem = load_json(args.default_kmemory)
 
 sec_sat = dict()
 for sec in memreport['sections']:
@@ -123,14 +135,28 @@ for el in config['elements']:
         else:
           addr1 = reg['physical_address']
           addr2 = 0
-          place_size = 0
+          place_size = []
           for s in secs_2:
+            dom_size=0
             for name in s[0]:
-              place_size += sec_sat[name][0]
+              dom_size += sec_sat[name][0]
+            place_size.append(dom_size)
           dom_ind = 0
           reg2 = deepcopy(reg['domains'])
           placed = False
           dec = False
+          def al(os, j):
+            align=0
+            if 'alignment' in os.keys():
+              align = os['alignment']**3
+            elif j == 0:
+              align = 4096
+            if align and os['physical_address']%align:
+              off = align-os['physical_address']%align
+            else:
+              off = 0
+            os['physical_address'] += off
+            return off
           for i in range(0, len(reg2)):
             l = 0
             if placed:
@@ -139,31 +165,44 @@ for el in config['elements']:
             for j in range(0, len(reg2[i]['output_sections'])):
               os = osi[j]
               if not placed:
-                addr2 = sec_sat[os['name']][1]
+                addr2 = os['physical_address'] if 'physical_address' in os.keys() else sec_sat[os['name']][1]
                 if addr1 < sec['address'] < addr2+sec_sat[os['name']][0]:
-                  os0 = reg['domains'][i]['output_sections'][0]
-                  os0['physical_address'] = sec_sat[os0['name']][1]
-                  secs_2[0][1]['output_sections'][0]['physical_address'] = sec['address']
+                  os0 = osi[0]
+                  #os0['physical_address'] = sec_sat[os0['name']][1]
+                  #al(os0, 0)
                   placed = True
+                  off = 0
+                  align = 0
                   for s in secs_2[::-1]:
+                    s[1]['output_sections'][0]['physical_address'] = sec['address']+off
+                    align_tmp = al(s[1]['output_sections'][0], 0)
                     reg['domains'].insert(i, s[1])
-                  if sec['address'] > addr2 or place_size >= addr2-sec['address']:
+                    off += place_size[secs_2.index(s)] + align_tmp
+                    align += align_tmp
+                  if sec['address'] > addr2 or sum(place_size)+align >= addr2-sec['address']:
                     dec = True
-                    os['physical_address'] = sec['address']+place_size
+                    os['physical_address'] = sec['address']+sum(place_size)+align
+                    al(os, j)
+                    place_size.append(align)
                   else:
                     break
               elif 'physical_address' in os.keys():
-                os['physical_adress'] = os['physical_address']+place_size
+                os['physical_address'] = os['physical_address']+sum(place_size)
+                al(os, j)
             if placed and not dec:
               break
             addr1 = addr2
           if not placed:
-            secs_2[0][1]['output_sections'][0]['physical_address'] = sec['address']
             placed = True
+            align = 0
+            off = 0
             for s in secs_2:
+              s[1]['output_sections'][0]['physical_address'] = sec['address'] + off
+              align_tmp = al(s[1]['output_sections'][0], 0)
               if 'domains' not in reg.keys():
                 reg['domains'] = list()
-              s[1]['output_sections'][0]['physical_address'] = sec['address']
               reg['domains'].append(s[1])
+              off += place_size[secs_2.index(s)] + align_tmp
+              align += align_tmp
 
-dump_json(kmem, args.out_kmem)
+dump_json(kmem, args.out_kmemory)

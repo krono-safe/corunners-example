@@ -6,6 +6,8 @@ assert __name__ != '__main__', f"{__file__} module cannot be run directly"
 P2020 = env.get("P2020", "power-mpc5777m-evb")
 MPC5777M = env.get("MPC5777M", "power-quoriq-ds-p")
 
+CORES = [0, 1, 2]
+
 TOP_DIR = __main__.Path(__main__.__file__).parent.resolve()
 PSY_DIR = TOP_DIR / "psy"
 SRC_DIR = TOP_DIR / "src"
@@ -135,6 +137,13 @@ CORUNNER_KMEMORY_JSON_TEMPLATE = """
           "start_symbol": "_start__bss_${symbol}",
           "end_symbol": "_end__bss_${symbol}",
           "type": "BSS"
+        },
+        {
+          "name": ".stack_${symbol}",
+          "initialization": "CLEAR",
+          "start_symbol": "_start__stack_${symbol}",
+          "end_symbol": "_end__stack_${symbol}",
+          "type": "BSS"
         }
       ],
       "protection": {
@@ -166,6 +175,14 @@ CORUNNER_KMEMORY_JSON_TEMPLATE = """
         ".data*"
       ],
       "destination": ".data_${symbol}"
+    },
+    {
+      "name": ".stack_${symbol}",
+      "sources": [
+        ".bss*",
+        ".data*"
+      ],
+      "destination": ".stack_${symbol}"
     },
     {
       "name": ".bss_${symbol}",
