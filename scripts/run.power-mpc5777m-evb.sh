@@ -1,5 +1,5 @@
 #This script is made to be sourced by the run.sh script. Do not use it alone!
-
+timer="5e6"
 run() {
   task="$1"
   core="$2"

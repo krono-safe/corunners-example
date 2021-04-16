@@ -92,8 +92,7 @@ LATEX_HEADER_TEMPLATE = r"""
   $$\bm{R(c, d)}$$ \textit{(\%)} \\\hline
 """
 
-LATEX_FOOTER = r""" \\
-
+LATEX_FOOTER = r"""
 \hline
 \end{tabular}
 """
@@ -118,6 +117,7 @@ def getopts(argv):
     parser.add_argument("--c1-on", type=Path, required=False)
     parser.add_argument("--output-dir", "-o", type=Path, required=True)
     parser.add_argument("--task", choices=["G", "H"], required=True)
+    parser.add_argument("--timer", type=float, default=5e6)
     parser.add_argument("--stats", action='store_true')
     parser.add_argument("--output-json", type=Path)
     parser.add_argument('--symetric', '-s', action='store_true')
@@ -191,6 +191,7 @@ def gen_stats(data, symetric, cores, tex_name):
                 text += r'\textbf{' + f"{r1:.3f} " + r'} '
             else:
                 text += f"{r1:.3f}"
+        text += r'\\'+'\n'
     text += LATEX_FOOTER
     print("To include the stats tex file add: '\input{", tex_name,"}' where you wants to include it", sep='')
     with open(tex_name.with_suffix('.tex'), "w") as stream:
@@ -228,17 +229,18 @@ def main(argv):
     #   (src,dst) => name
     ea_to_name, _ = get_nodes_to_ea(args)
     data = {
-        C0_OFF: decode_file(args.c0_off),
-        C0_ON: decode_file(args.c0_on),
+        C0_OFF: decode_file(args.c0_off, args.timer),
+        C0_ON: decode_file(args.c0_on, args.timer),
     }
 
     if args.product == P2020:
         cores = [0, 1]
     else:
         cores = [1, 2]
+
     if args.symetric:
-        data[C1_OFF] = decode_file(args.c1_off)
-        data[C1_ON] =  decode_file(args.c1_on)
+        data[C1_OFF] = decode_file(args.c1_off, args.timer)
+        data[C1_ON] =  decode_file(args.c1_on, args.timer)
 
     layout = LAYOUTS[args.task]
 
@@ -248,8 +250,8 @@ def main(argv):
     }
 
     if args.symetric:
-        groups[C1_OFF] = ("Core {cores[1]}", "OFF", False)
-        groups[C1_ON] = ("Core {cores[1]", "ON", False)
+        groups[C1_OFF] = (f"Core {cores[1]}", "OFF", False)
+        groups[C1_ON] = (f"Core {cores[1]}", "ON", False)
 
     jdata = gen_json_data(data, ea_to_name, args.output_dir, groups)
     gen_r_script(jdata, layout, args.output_dir, args.symetric)
