@@ -4,8 +4,9 @@ import json
 from collections import namedtuple
 import tempfile
 import struct
-import subprocess
+from subprocess import PIPE, run, TimeoutExpired, CalledProcessError
 from string import Template
+from sys import exit, stderr
 
 EA = namedtuple("EA", ["source", "target"])
 
@@ -20,9 +21,9 @@ def load_json(f, s=False, o=True):
 
 def dump_json(obj, f=None, s=False):
     if s:
-        return json.dumps(obj, indent='\t')
+        return json.dumps(obj, indent=2)
     with open(f, 'w') as jf:
-        json.dump(obj, jf, indent='\t')
+        json.dump(obj, jf, indent=2)
 
 def substi_temp(template, context):
     return Template(template).substitute(context)
@@ -32,7 +33,7 @@ def write_template(output_filename, template, context):
     with open(output_filename, "w") as fileh:
         fileh.write(substi_temp(template, context))
 
-def decode_file(input_file):
+def decode_file(input_file, timer):
     sorted_data = dict()
 
     # Data format is simple: 16-bits, 16-bits, 32-bits, 64-bits 64-bits
@@ -55,7 +56,7 @@ def decode_file(input_file):
         #
         # The ticker ticks at 5MHz, hence Freq_Hz = 5e6
         # We want a result in ms, so we * 1e3
-        val_ms = float(val) / 5e6 * 1e3
+        val_ms = float(val) / timer * 1e3
         all_time += val_ms
 
         # Esd/Ddl are in ns. Convert to us.
@@ -76,15 +77,13 @@ def decode_file(input_file):
         })
 
     print(f"{count} measures processed")
-    print(f"{all_time} ms of run-time")
+    print(f"{all_time} ms of run-time, with quota timer of {timer:.1E}Mhz")
     return sorted_data
 
 
 def load_db(kdbv, path_to_db):
-    with tempfile.TemporaryFile() as tmp:
-        subprocess.check_call([kdbv, path_to_db], stdout=tmp)
-        tmp.seek(0)
-        return json.load(tmp)
+    proc = run([kdbv, path_to_db], stdout=PIPE, check=True)
+    return json.loads(proc.stdout)
 
 
 def get_nodes_to_ea(args):
@@ -196,6 +195,7 @@ def psyko(conf, *cmd_args):
         conf['psyko'],
         "-K", conf['rtk_dir'],
         "--product", conf['product'],
+        '--color', 'yes',
     ] + [*cmd_args]
     print("[RUN] ", end='')
     for item in cmd:
@@ -212,12 +212,15 @@ def psyko(conf, *cmd_args):
     # time.
     def run_cmd(cmd):
         try:
-            ret = subprocess.run(
-                cmd, timeout=30, cwd=conf['cwd'], universal_newlines=True)
-            assert ret.returncode == 0, "Failed to run psyko"
+            print(run( cmd, timeout=30, cwd=conf['cwd'], check=True,
+              universal_newlines=True, stderr=PIPE).stderr, file=stderr)
             return True
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             return False
+        except CalledProcessError as e:
+            err = e.stderr
+            print(err, file=stderr)
+            exit("Failed to run psyko")
 
     while not run_cmd(cmd):
         pass
