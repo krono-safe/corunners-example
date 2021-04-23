@@ -32,6 +32,7 @@ LAYOUTS = {
         ["H8",  "H9",  "H10", "H11"],
         ["H12", "H13", "H14", "H15"],
     ],
+    "U": [["U0"]]
 }
 
 R_SCRIPT_HEADER_TEMPLATE = """
@@ -116,7 +117,7 @@ def getopts(argv):
     parser.add_argument("--c1-off", type=Path, required=False)
     parser.add_argument("--c1-on", type=Path, required=False)
     parser.add_argument("--output-dir", "-o", type=Path, required=True)
-    parser.add_argument("--task", choices=["G", "H"], required=True)
+    parser.add_argument("--task", choices=["G", "H", 'U'], required=True)
     parser.add_argument("--timer", type=float, default=5e6)
     parser.add_argument("--stats", action='store_true')
     parser.add_argument("--output-json", type=Path)

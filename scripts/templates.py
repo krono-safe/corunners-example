@@ -7,6 +7,7 @@ P2020 = env.get("P2020", "power-mpc5777m-evb")
 MPC5777M = env.get("MPC5777M", "power-quoriq-ds-p")
 
 CORES = [0, 1, 2]
+FLASHLIKE = ['FLASH', 'U']
 
 TOP_DIR = __main__.Path(__main__.__file__).parent.resolve()
 PSY_DIR = TOP_DIR / "psy"

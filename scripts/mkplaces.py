@@ -13,12 +13,6 @@ from scriptutil import get_nodes_to_ea, decode_file, gen_json_data, calc, substi
 P2020 = environ.get('P2020','power-qoriq-p2020-ds-p')
 MPC5777M = environ.get('MPC5777M',  'power-mpc5777m-evb')
 
-"""C0_OFF = "Task: C0, Corunner: OFF"
-C0_ON = "Task: C0, Corunner: ON"
-C1_OFF = "Task: C1, Corunner: OFF"
-C1_ON = "Task: C1, Corunner: ON"
-"""
-
 R_SCRIPT = str()
 
 LAYOUTS = {
@@ -35,6 +29,7 @@ LAYOUTS = {
       ["H8",  "H9",  "H10", "H11"],
       ["H12", "H13", "H14", "H15"],
   ],
+  'U': [['U0']]
 }
 
 R_SCRIPT_HEADER_TEMPLATE = """
@@ -63,12 +58,13 @@ if(n == 1){
 
 p <- plt(values~sample, data=data,
     col=gray.colors(${sets},rev=T,start=0.4,end=0.8,alpha=1),
-    cex.axis=${sets}/2,
+    cex.axis=${sets}/4,
     las=2,
     lwd=${sets}/8,
     #side="left",
     plotCentre="line",
-    pchMed=seq(0, ${sets},1)
+    pchMed=seq(0, ${sets},1),
+    ann=F
 )
 #p
 title(ylab="Time (ms)",
@@ -276,7 +272,8 @@ def main(argv):
   gen_r_script(jdata, layout, len(data), args.output_dir)
 
   if args.stats:
-    gen_stats(jdata, layout, args.output_dir.resolve() / f"stats_{args.task}")
+    pass
+    #gen_stats(jdata, layout, args.output_dir.resolve() / f"stats_{args.task}")
   if args.output_json is not None:
     with open(args.output_json, "w") as outp:
       dump_json(jdata, outp)
