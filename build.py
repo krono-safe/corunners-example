@@ -7,7 +7,23 @@ import sys
 import scripts.templates
 from scripts.templates import *
 from scripts.scriptutil import load_db, load_json, dump_json, write_template, psyko
+from operator import itemgetter
 
+def cor_par(s):
+  pars = s.split(',')
+  pars[0] = int(pars[0])
+  assert pars[0] in CORES, \
+    f"The corunner id must be one of {CORES.join(', ')}"
+  l = len(pars)
+  if l > 2:
+    raise argparse.ArgumentTypeError("Corunners parameters must be of type <core>,<start address of read>")
+  elif l == 2:
+    return pars
+  else:
+    return [pars[0], None]
+
+def cor_cores(cors):
+  return [i[0] for i in cors]
 
 def getopts(argv):
     parser = argparse.ArgumentParser(description='Corunners builder')
@@ -19,8 +35,8 @@ def getopts(argv):
     parser.add_argument("--product", "-p", type=str,
                         help=Help.PRODUCT,  required=True,
                         choices=[P2020,MPC5777M])
-    parser.add_argument("--corunner-id", "-C", type=int, choices=CORES,
-                        action="append", help=Help.CORUNNER_ID, default=[])
+    parser.add_argument("--corunner", "-C", type=cor_par,
+                        action="append", help=Help.CORUNNER, default=[])
     parser.add_argument("--task", "-T", type=str, choices=["H", "G"]+FLASHLIKE,
                         help=Help.TASK, required=True)
     parser.add_argument("--core", "-c", type=int, choices=CORES,
@@ -33,10 +49,8 @@ def getopts(argv):
                         help=Help.MEM_CONF)
     parser.add_argument("--output", "-o", type=Path,
                         help=Help.OUTPUT)
-    parser.add_argument("--use-sram", "-s", action='append',
-                        help=Help.SRAM)
     args = parser.parse_args(argv[1:])
-    assert not args.core in args.corunner_id
+    assert args.core not in cor_cores(args.corunner)
     if args.output is None:
         args.output = args.build_dir / "program.elf"
     return args
@@ -123,8 +137,8 @@ def get_sources(task_name):
 def main(argv):
     args = getopts(argv)
 
-    used_cores = args.corunner_id + [args.core]
-    args.corunner_id.sort()
+    used_cores = cor_cores(args.corunner) + [args.core]
+    args.corunner.sort(key=itemgetter(0))
 
     def object_of(source_filename, extension = ".o"):
         return args.build_dir / (source_filename.name + extension)
@@ -146,14 +160,15 @@ def main(argv):
     gen_agent_config(ag_config, f"task_{args.task}", args.core)
     mem_configs = []
     corunners = []
-    for corunner in args.corunner_id:
+    for corunner,  cor_start in args.corunner:
+        use_sram = bool(cor_start)
         sram_args = dict()
         co_config = args.build_dir / f"corunner_{corunner}.hjson"
         co_kmem = args.build_dir / f"corunner_{corunner}_kmem.json"
         co_file = args.build_dir / f"corunner_{corunner}"
-        if str(corunner) in args.use_sram:
-            sram_args['start'] = '0x1380000'
-            sram_args['size'] = 0x188c
+        if use_sram:
+            sram_args['start'] = cor_start
+            sram_args['size'] = 0x2000
         symbol = f"co_runner_sram{corunner}" if sram_args else f"co_runner_flash{corunner}"
         co_file = co_file.with_suffix('.asm')
         sources["asm"].append(co_file)
@@ -232,7 +247,7 @@ def main(argv):
                 for obj in def_memconf['kmemory']['objects']
                 if obj['id'] in [f"core_{core}_co_runner_stack.c"
                     for core in used_cores]}
-            for core in args.corunner_id:
+            for core in cor_cores(args.corunner):
                 stack = f"core_{core}_co_runner_stack.c"
                 for corunner in corunners:
                    symbol = corunner if corunner[-1] == str(core) else ''
