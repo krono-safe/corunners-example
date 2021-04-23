@@ -3,9 +3,13 @@
     cores: [
       {
         id: 0
+        l1_cache_instruction: @ICACHE0@
+        l1_cache_data: @DCACHE0@
       }
       {
         id: 1
+        l1_cache_instruction: @ICACHE1@
+        l1_cache_data: @DCACHE1@
       }
     ]
   }

@@ -21,7 +21,7 @@ def getopts(argv):
                         choices=[P2020,MPC5777M])
     parser.add_argument("--corunner-id", "-C", type=int, choices=CORES,
                         action="append", help=Help.CORUNNER_ID, default=[])
-    parser.add_argument("--task", "-T", type=str, choices=["H", "G", "FLASH"],
+    parser.add_argument("--task", "-T", type=str, choices=["H", "G"]+FLASHLIKE,
                         help=Help.TASK, required=True)
     parser.add_argument("--core", "-c", type=int, choices=CORES,
                         help=Help.CORE, required=True)
@@ -107,7 +107,7 @@ def get_sources(task_name):
         SRC_DIR / "filter2.c",
     ]
     psy_sources = [PSY_DIR / f"task_{task_name}.psy"]
-    if task_name != "FLASH":
+    if task_name not in FLASHLIKE:
         c_sources += [
             STUBS_DIR / f"suite_task_{task_name}.c",
         ]
@@ -129,13 +129,11 @@ def main(argv):
     def object_of(source_filename, extension = ".o"):
         return args.build_dir / (source_filename.name + extension)
 
-    hjson_conf_file = f"app.{args.product}.hjson"
-
     sources = get_sources(args.task)
 
     ag_config = args.build_dir / "task.hjson"
     app_configs = [
-        CFG_DIR / hjson_conf_file,
+        args.build_dir / "app.hjson",
         CFG_DIR / f"task_{args.task}.hjson",
         ag_config,
     ]
@@ -166,7 +164,7 @@ def main(argv):
         corunners.append(symbol)
         gen_corunner_config(co_config, corunner, symbol, object_of(co_file), co_kmem)
 
-    if args.task != "FLASH":
+    if args.task not in FLASHLIKE:
         stub_config = args.build_dir / "stub.hjson"
         gen_agent_config(stub_config, f"sends_to_task_{args.task}", args.core)
         app_configs.append(stub_config)
