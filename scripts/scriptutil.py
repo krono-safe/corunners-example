@@ -7,6 +7,7 @@ import struct
 from subprocess import PIPE, run, TimeoutExpired, CalledProcessError
 from string import Template
 from sys import exit, stderr
+from time import sleep
 
 EA = namedtuple("EA", ["source", "target"])
 
@@ -76,7 +77,7 @@ def decode_file(input_file, timer):
             "dst": dst,
         })
 
-    print(f"{count} measures processed")
+    print(f"{count} measures processed, {len(contents)}, {input_file}")
     print(f"{all_time} ms of run-time, with quota timer of {timer:.1E}Mhz")
     return sorted_data
 
@@ -219,8 +220,14 @@ def psyko(conf, *cmd_args):
             return False
         except CalledProcessError as e:
             err = e.stderr
+            lmapi = 'Unknown LMAPI error' in err
             print(err, file=stderr)
-            exit("Failed to run psyko")
+            if lmapi:
+              print('retrying in 60 seconds', file=stderr)
+              sleep(60)
+              return False
+            else:
+              exit("Failed to run psyko")
 
     while not run_cmd(cmd):
         pass
