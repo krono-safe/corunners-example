@@ -18,10 +18,10 @@ MPC5777M="${MPC5777M:-power-mpc5777m-evb}"
 ROOT=${ROOT:-`pwd`}
 
 usage() {
-  echo "Usage: $0 -T H|G|flash|flash2|Hsram -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$P2020|$MPC5777M> [-h]
+  echo "Usage: $0 -T H|G|U|flash|flash2|Hsram|Hplaces|cpuPri -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$P2020|$MPC5777M> [-h]
 
   -P <psyko>    Path to the PsyC compiler
-  -T H|G|flash|flash2|Hsram|Hplaces
+  -T H|U|G|flash|flash2|Hsram|Hplaces|cpuPri
                 Type of run (required choice)
   -d <kdbv>     Path to the kdbv program
   -k <rtk_dir>  Path to the ASTERIOS RTK
@@ -103,7 +103,7 @@ echo "Make sure you have a Trace32 instance ready"
 generate_R() {
   extra_args=
   script="mkdata.py"
-  if [ "$TYPE" = "Hplaces" ]; then
+  if [ "$TYPE" = "Hplaces" ] || [ "$TYPE" = "cpuPri" ]; then
     bins="
                   --traces-dir '$TRACES_DIR' \\
     "
@@ -111,13 +111,15 @@ generate_R() {
                   --core $2
     "
     script="mkplaces.py"
-    ref="$1$3-COFF"
+    ref="$3"
+    sym=
   else
     bins="
                   --c0-off '$TRACES_DIR/c0-off.bin' \\
                   --c0-on '$TRACES_DIR/c0-on.bin' \\
                   --c1-off '$TRACES_DIR/c1-off.bin' \\
                   --c1-on '$TRACES_DIR/c1-on.bin' \\
+                  --stats \\
     "
     ref="c0-off"
     case "$1" in
@@ -141,7 +143,7 @@ generate_R() {
         --kdbv '$KDBV' \\
         --kcfg '$BUILD_DIR/$1/$ref/gen/app/partos/0/dbs/task_$1_kcfg.ks' \\
         --kapp '$BUILD_DIR/$1/$ref/gen/app/config/kapp.ks' \\
-        --output-dir '$OUTDIR/$TYPE' --task=$1 --stats \\
+        --output-dir '$OUTDIR/$TYPE' --task=$1 \\
         --product '$PRODUCT'\\
         --timer '$timer' \\
         $sym \\
@@ -160,16 +162,26 @@ elif [ "x$TYPE" = x"flash2" ]; then
 elif [ "x$TYPE" = x"G" ]; then
   run_G
   generate_R "G"
+elif [ "x$TYPE" = x"U" ]; then
+  STUBBORN_MAX_MEASURES=512
+  run_U
+  generate_R "U"
 elif [ "x$TYPE" = x"H" ]; then
   run_H
   generate_R "H"
 elif [ "x$TYPE" = x"Hsram" ]; then
+  STUBBORN_MAX_MEASURES=512
   run_Hsram
   generate_R "H"
 elif [ "x$TYPE" = x"Hplaces" ]; then
-  sym=
+  STUBBORN_MAX_MEASURES=512
   run_places_H 0
-  ref=1
+  ref="H1-COFF"
+  generate_R "H" 0 $ref
+elif [ "x$TYPE" = x"cpuPri" ]; then
+  STUBBORN_MAX_MEASURES=512
+  run_cpu_pri_H 0
+  ref=ref-noc
   generate_R "H" 0 $ref
 else
   echo "*** Unknown argument '$TYPE'"

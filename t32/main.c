@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#define BUFF_EL_SIZE 24
 #define ERR(Fmt, ...) fprintf(stderr, "*** " Fmt "\n", ## __VA_ARGS__)
 #define LOG(file, Fmt, ...) fprintf(file, "*** " Fmt "\n", ## __VA_ARGS__)
 #define DIE(Code, Fmt, ...) \
@@ -22,9 +23,6 @@
   } while (0)
 
 
-/* We have a buffer of 1024 elements, each element being a structure of size
- * 24.  These are hard-coded parameters, not that great, but it will do */
-static uint8_t BUFFER[1024 * 24];
 
 
 /**
@@ -250,6 +248,20 @@ int main(const int argc, const char *const argv[argc])
   const char *const output = argv[2];
   const char *const logfile = argv[3];
   struct timeval stop, start;
+  const char *const envval = getenv("STUBBORN_MAX_MEASURES");
+  static uint8_t *BUFFER;
+  unsigned int buff_len = 1024;
+  /* We have a buffer of n elements (1024 by default), each element being a
+   * structure of size 24.  These are hard-coded parameters, not that great, but *
+   * it will do */
+  if(envval)
+  {
+    if(sscanf(envval, "%d", &buff_len) != 1)
+    { buff_len = 1024; }
+  }
+
+  BUFFER = calloc(buff_len, BUFF_EL_SIZE);
+  buff_len *= BUFF_EL_SIZE;
 
   /* Make sure we will (almost) always terminate the program by leaving T32 in
    * a clean state. */
@@ -296,7 +308,7 @@ int main(const int argc, const char *const argv[argc])
   const uint32_t address = read_u32("&k2_stubborn_measures");
 
   /* Retrieve the profiling buffer in-memory */
-  ret = T32_ReadMemory(address, 0x0, BUFFER, sizeof(BUFFER));
+  ret = T32_ReadMemory(address, 0x0, BUFFER, buff_len);
   if (ret != T32_OK)
   { DIE(ret, "Failed to read memory from address 0x%08X", address); }
 
@@ -307,7 +319,7 @@ int main(const int argc, const char *const argv[argc])
     const int err = errno;
     DIE(err, "Failed to open '%s' for writing: %s", output, strerror(err));
   }
-  if (fwrite(BUFFER, 1, sizeof(BUFFER), file) != sizeof(BUFFER))
+  if (fwrite(BUFFER, 1, buff_len, file) != buff_len)
   {
     const int err = errno;
     fclose(file);
