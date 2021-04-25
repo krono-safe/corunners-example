@@ -15,10 +15,10 @@ KDBV=
 TYPE=
 
 usage() {
-  echo "Usage: $0 -T H|G|flash|flash2|Hsram -p <psyko> -k <rtk_dir> -t <runner> -d <kdbv> [-h]
+  echo "Usage: $0 -T H|G|flash|flash2|Hsram|Gsram -p <psyko> -k <rtk_dir> -t <runner> -d <kdbv> [-h]
 
   -p <psyko>    Path to the PsyC compiler
-  -T H|G|flash|flash2|Hsram
+  -T H|G|flash|flash2|Hsram|Gsram
                 Type of run (required choice)
   -d <kdbv>     Path to the kdbv program
   -k <rtk_dir>  Path to the ASTERIOS RTK
@@ -213,7 +213,7 @@ elif [ "x$TYPE" = x"H" ]; then
                   --kcfg '$BUILD_DIR/H/c0-off/gen/app/partos/0/dbs/task_H_kcfg.ks' \
                   --kapp '$BUILD_DIR/H/c0-off/gen/app/config/kapp.ks' \
                   --output-dir '$OUTDIR/H' --task=H \
-                  --stats --output-json '$TRACES_DIR/Hsram.json'
+                  --stats --output-json '$TRACES_DIR/H.json'
    cd '$OUTDIR/H'
    R --no-save < plot.R
   ===========================================
@@ -238,6 +238,30 @@ elif [ "x$TYPE" = x"Hsram" ]; then
                   --output-dir '$OUTDIR/Hsram' --task=H \
                   --stats --output-json '$TRACES_DIR/Hsram.json'
    cd '$OUTDIR/Hsram'
+   R --no-save < plot.R
+  ===========================================
+  "
+
+elif [ "x$TYPE" = x"Gsram" ]; then
+  #   Task Core C0  C1  C2  Local
+  run G    1    OFF OFF OFF OFF "$TRACES_DIR/c0-off.bin"
+  run G    1    ON  OFF ON  OFF "$TRACES_DIR/c0-on.bin"
+  run G    2    OFF OFF OFF OFF "$TRACES_DIR/c1-off.bin"
+  run G    2    ON  ON  OFF OFF "$TRACES_DIR/c1-on.bin"
+
+  echo "
+  ========= To generate the images ==========
+   '$(pwd)/scripts/mkdata.py' \
+                  --c0-off '$TRACES_DIR/c0-off.bin' \
+                  --c0-on '$TRACES_DIR/c0-on.bin' \
+                  --c1-off '$TRACES_DIR/c1-off.bin' \
+                  --c1-on '$TRACES_DIR/c1-on.bin' \
+                  --kdbv '$KDBV' \
+                  --kcfg '$BUILD_DIR/G/c0-off/gen/app/partos/0/dbs/task_G_kcfg.ks' \
+                  --kapp '$BUILD_DIR/G/c0-off/gen/app/config/kapp.ks' \
+                  --output-dir '$OUTDIR/Gsram' --task=G \
+                  --stats --output-json '$TRACES_DIR/Gsram.json'
+   cd '$OUTDIR/Gsram'
    R --no-save < plot.R
   ===========================================
   "
