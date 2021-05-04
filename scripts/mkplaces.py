@@ -12,6 +12,7 @@ from scriptutil import get_nodes_to_ea, decode_file, gen_json_data, calc, substi
 
 P2020 = environ.get('P2020','power-qoriq-p2020-ds-p')
 MPC5777M = environ.get('MPC5777M',  'power-mpc5777m-evb')
+NVAL = int(environ.get('STUBBORN_MAX_MEASURES', '1024'))
 
 R_SCRIPT = str()
 
@@ -41,7 +42,7 @@ library("vioplot")
 #  - https://www.r-graph-gallery.com/96-boxplot-with-jitter.html
 
 pdf(file="out.pdf", 7.5*${sets}, 7.5*${sets})
-par(mfrow=c(${rows},${cols}), mar=${sets}*c(3,3,1,1), oma=c(0,0,0,0), lheight=${sets})
+par(mfrow=c(${rows},${cols}), mar=${sets}*c(3,3,1,1), oma=${sets}*c(0,0,1,0), lheight=${sets}, page=T)
 """
 
 EA_R_TEMPLATE = """
@@ -49,14 +50,17 @@ EA_R_TEMPLATE = """
 result <- fromJSON(file = "${ea}.json")
 data <- as.data.frame(result)
 n <- ${n}
-
 if(n == 1){
   plt <- plot
 }else{
   plt <- vioplot
 }
+"""
 
+TESTS_R_TEMPLATE = """
+##For ${task} ###############################
 p <- plt(values~sample, data=data,
+    subset=grepl("${task}-", sample), drop=T,
     col=gray.colors(${sets},rev=T,start=0.4,end=0.8,alpha=1),
     cex.axis=${sets}/4,
     las=2,
@@ -71,14 +75,14 @@ title(ylab="Time (ms)",
     line=1.2*${sets},
     cex.lab=2*${sets}/3,
 )
-title(main=bquote(${ea0}[${ea1_}] ~ "(n="*.(n)*")"),
+title(main=bquote(${ea0}[${ea1_}] ~ "(n="*.(n)*", pos=${pos})"),
     cex.main=${sets},
 )
 abline(v=(seq(1, ${sets},1)), col="black", lty="dotted", lwd=${sets}/4)
 """
 
 R_SCRIPT_FOOTER_TEMPLATE = """
-# Total n: ${ns} (should be 1024)
+# Total n: ${ns} (should be ${nt}, if all the EA are ploted)
 dev.off()\n
 """
 
@@ -128,26 +132,37 @@ def gen_r_script(data, layout, sets, out_dir):
     R_SCRIPT += substi_temp(template, context)
 
   rows, cols = check_layout(layout)
-  complete_script(R_SCRIPT_HEADER_TEMPLATE, {'rows': rows,
-                                             'cols': cols,
-                                             'sets': sets})
   ns = 0
+  info_set = sorted(set(list(data.values())[0]['sample']))
+  tests = {}
+  ntests = len(info_set)
 
-  for row in layout:
-    for ea in row:
-      if ea is None:
-        continue
-      minval = min(data[ea]["values"])
-      maxval = max(data[ea]["values"])
-      n = int(len(data[ea]["values"]) / sets)
-      ns += n
-      complete_script(EA_R_TEMPLATE, {'ea': ea,
-                                      'ea0': ea[0],
+  for sample in info_set:
+    t, c = sample.split('-')
+    if t not in tests.keys():
+      tests[t] = list()
+    tests[t].append(c)
+
+  complete_script(R_SCRIPT_HEADER_TEMPLATE, {'rows': 1,
+                                             'cols': 1,
+                                             'sets': sets})
+
+
+  for ea in [g for r in layout for g in r if g]:
+    n = int(len(data[ea]["values"]) / sets)
+    ns += n
+    complete_script(EA_R_TEMPLATE, {'ea': ea,
+                                    'n': n})
+
+    for task in tests.keys():
+      complete_script(TESTS_R_TEMPLATE, {'ea0': ea[0],
                                       'ea1_': ea[1:],
-                                      'n': n,
-                                      'sets': sets})
+                                      'sets': sets,
+                                      'pos': task[1:],
+                                      'task': task})
 
-  complete_script(R_SCRIPT_FOOTER_TEMPLATE, {"ns": ns})
+  complete_script(R_SCRIPT_FOOTER_TEMPLATE, {"ns": ns,
+                                             "nt": NVAL})
   out_dir.mkdir(parents=True, exist_ok=True)
   with open(out_dir / "plot.R", "w") as stream:
     stream.write(R_SCRIPT)
@@ -184,7 +199,6 @@ def gen_stats(data, layout, tex_name):
     bvalues[sample] = 0.0
   cols = gen_stats_header(tests)
   text = substi_temp(LATEX_HEADER_TEMPLATE, {'cols': 'X|'*cols})
-  stderr.flush()
 
   for ea in [g for r in layout for g in r if g]:
     info = data[ea]
