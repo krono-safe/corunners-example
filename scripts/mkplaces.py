@@ -113,7 +113,7 @@ def getopts(argv):
   parser.add_argument("--core", type=int, required=True)
   parser.add_argument("--corunner-core", type=int)
   parser.add_argument("--output-dir", "-o", type=Path, required=True)
-  parser.add_argument("--task", choices=["G", "H"], required=True)
+  parser.add_argument("--task", choices=["G", "H", 'U'], required=True)
   parser.add_argument("--timer", type=float, default=5e6)
   parser.add_argument("--stats", action='store_true')
   parser.add_argument("--output-json", type=Path)
