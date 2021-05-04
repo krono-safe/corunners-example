@@ -103,7 +103,7 @@ echo "Make sure you have a Trace32 instance ready"
 generate_R() {
   extra_args=
   script="mkdata.py"
-  if [ "$TYPE" = "Hplaces" ] || [ "$TYPE" = "cpuPri" ]; then
+  if [ "${TYPE%%.*}" = "places" ] || [ "$TYPE" = "cpuPri" ]; then
     bins="
                   --traces-dir '$TRACES_DIR' \\
     "
@@ -173,11 +173,12 @@ elif [ "x$TYPE" = x"Hsram" ]; then
   STUBBORN_MAX_MEASURES=512
   run_Hsram
   generate_R "H"
-elif [ "x$TYPE" = x"Hplaces" ]; then
+elif [ "x${TYPE%%.*}" = x"places" ]; then
+  t=${TYPE##*.}
   STUBBORN_MAX_MEASURES=512
-  run_places_H 0
-  ref="H1-COFF"
-  generate_R "H" 0 $ref
+  run_places 0 $t
+  ref="${t}05-COFF"
+  generate_R "$t" 0 $ref
 elif [ "x$TYPE" = x"cpuPri" ]; then
   STUBBORN_MAX_MEASURES=512
   run_cpu_pri_H 0
