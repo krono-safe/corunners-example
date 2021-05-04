@@ -16,9 +16,10 @@ PRODUCT="${PRODUCT:-}"
 P2020="${P2020:-power-qoriq-p2020-ds-p}"
 MPC5777M="${MPC5777M:-power-mpc5777m-evb}"
 ROOT=${ROOT:-`pwd`}
+GENONLY=${GENONLY:-}
 
 usage() {
-  echo "Usage: $0 -T H|G|U|flash|flash2|Hsram|Hplaces|cpuPri -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$P2020|$MPC5777M> [-h]
+  echo "Usage: $0 -T H|G|U|flash|flash2|Hsram|Hplaces|cpuPri -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$P2020|$MPC5777M> [-g] [-h]
 
   -P <psyko>    Path to the PsyC compiler
   -T H|U|G|flash|flash2|Hsram|Hplaces|cpuPri
@@ -27,6 +28,7 @@ usage() {
   -k <rtk_dir>  Path to the ASTERIOS RTK
   -t <runner>   Path to the executable to control Trace32
   -p <product>  Target product
+  -g            Do not run tests, generate results graphs only
   -h            Display this message
 Alternatively you can use the following environment variables to set the required arguments:
   PSYKO
@@ -35,15 +37,19 @@ Alternatively you can use the following environment variables to set the require
   RTK
   HOOK
   PRODUCT
+  GENONLY
 "
 }
 
 
-while getopts "P:k:c:t:d:T:p:h" opt; do
+while getopts "P:k:c:t:d:T:p:gh" opt; do
   case $opt in
     h)
       usage
       exit 0
+      ;;
+    g)
+      GENONLY=1
       ;;
     P)
       PSYKO="$OPTARG"
@@ -100,6 +106,11 @@ rm "$TRACES_DIR/times.log" || true
 
 echo "Make sure you have a Trace32 instance ready"
 
+not_supported() {
+  echo "*** $1 is not supported for $PRODUCT" > /dev/stderr
+  exit 1
+}
+
 generate_R() {
   extra_args=
   script="mkdata.py"
@@ -152,39 +163,42 @@ generate_R() {
    cd "$OUTDIR/$TYPE"
    R --no-save < plot.R
 }
-
 if [ "x$TYPE" = x"flash" ]; then
-  run_flash
-  generate_R "FLASH"
+  cmd='run_flash'
+  r_args='FLASH'
 elif [ "x$TYPE" = x"flash2" ]; then
-  run_flash2
-  generate_R "FLASH"
+  cmd='run_flash2'
+  r_args='FLASH'
 elif [ "x$TYPE" = x"G" ]; then
-  run_G
-  generate_R "G"
+  cmd='run_G'
+  r_args='G'
 elif [ "x$TYPE" = x"U" ]; then
   STUBBORN_MAX_MEASURES=512
-  run_U
-  generate_R "U"
+  cmd='run_U'
+  r_args='U'
 elif [ "x$TYPE" = x"H" ]; then
-  run_H
-  generate_R "H"
+  cmd='run_H'
+  r_args='H'
 elif [ "x$TYPE" = x"Hsram" ]; then
   STUBBORN_MAX_MEASURES=512
-  run_Hsram
-  generate_R "H"
+  cmd='run_Hsram'
+  r_args='H'
 elif [ "x${TYPE%%.*}" = x"places" ]; then
   t=${TYPE##*.}
   STUBBORN_MAX_MEASURES=512
-  run_places 0 $t
   ref="${t}05-COFF"
-  generate_R "$t" 0 $ref
+  cmd="run_places 0 $t"
+  r_args="$t 0 $ref"
 elif [ "x$TYPE" = x"cpuPri" ]; then
   STUBBORN_MAX_MEASURES=512
-  run_cpu_pri_H 0
-  ref=ref-noc
-  generate_R "H" 0 $ref
+  ref="ref-coff"
+  cmd="run_cpu_pri_H 0"
+  r_args="H 0 $ref"
 else
   echo "*** Unknown argument '$TYPE'"
   exit 1
 fi
+
+export STUBBORN_MAX_MEASURES
+[ -z "$GENONLY" ] && eval "$cmd"
+generate_R $r_args

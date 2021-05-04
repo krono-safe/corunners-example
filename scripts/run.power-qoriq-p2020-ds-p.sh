@@ -64,7 +64,6 @@ run() {
   fi
 
   echo "####################################################################"
-  export STUBBORN_MAX_MEASURES
 
 
 #   Compile
@@ -88,15 +87,9 @@ run() {
     --product "$PRODUCT" \
     $extra_opts
 
-  #return
 #   And now, call a hook script to control the execution of trace32
 #   It shall dump the binary buffer in '$out'.
   "$RUN_TRACE32_HOOK" "$build_dir/program.elf" "$core" "$out" "$TRACES_DIR/times.log"
-}
-
-not_supported() {
-  echo "*** $1 is not supported for $PRODUCT" > /dev/stderr
-  exit 1
 }
 
 wrong_core() {
