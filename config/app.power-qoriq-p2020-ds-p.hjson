@@ -12,9 +12,6 @@
         l1_cache_data: @DCACHE1@
       }
     ]
-    bsp: {
-        l2_cache: false
-    }
 
   }
 }

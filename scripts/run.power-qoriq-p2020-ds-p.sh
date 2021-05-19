@@ -246,5 +246,24 @@ run_places(){
 }
 
 run_Hsram() {
-  not_supported "Hsram"
+  c="$1"
+  t="$2"
+  ADDR_PRE="\"region\":"
+ # CORUNNER_READ_SIZE_0="0x40000"
+ # CORUNNER_READ_SIZE_1="0x40000"
+  export CORUNNER_READ_SIZE_0
+  export CORUNNER_READ_SIZE_1
+
+  gen_place "$t" "-$c" "\"l2sram\"" "\"\"" "$TRACES_DIR/${t}SRAM-COFF.bin"
+  gen_place "$t" "$c" "\"l2sram\"" "\"ddr\"" "$TRACES_DIR/${t}SRAM-CDDR.bin"
+  CORUNNER_READ_0="0x80000000"
+  CORUNNER_READ_1="0x80000000"
+  gen_place "$t" "$c" "\"l2sram\"" "\"ddr\"" "$TRACES_DIR/${t}SRAM-CON.bin"
+  L2SR256="ON"
+  export L2SR256
+  gen_place "$t" "-$c" "\"l2sram\"" "\"\"" "$TRACES_DIR/${t}SRAMR1-COFF.bin"
+  gen_place "$t" "$c" "\"l2sram\"" "\"ddr\"" "$TRACES_DIR/${t}SRAMR1-CR1.bin"
+  CORUNNER_READ_0="0x80040000"
+  CORUNNER_READ_1="0x80040000"
+  gen_place "$t" "$c" "\"l2sram\"" "\"ddr\"" "$TRACES_DIR/${t}SRAMR1-CR2.bin"
 }

@@ -168,7 +168,7 @@ def main(argv):
         co_file = args.build_dir / f"corunner_{corunner}"
         if use_sram:
             sram_args['start'] = cor_start
-            sram_args['size'] = 0x2000
+            sram_args['size'] = int(env.get(f"CORUNNER_READ_SIZE_{corunner}", "0x2000"), 16)
         symbol = f"co_runner_sram{corunner}" if sram_args else f"co_runner_flash{corunner}"
         co_file = co_file.with_suffix('.asm')
         sources["asm"].append(co_file)
