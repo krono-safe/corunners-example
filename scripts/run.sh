@@ -184,13 +184,48 @@ elif [ "x$TYPE" = x"Hsram" ]; then
   cmd='run_Hsram'
   r_args='H'
 elif [ "x${TYPE%%.*}" = x"places" ]; then
-  t=${TYPE##*.}
-  STUBBORN_MAX_MEASURES=512
+  STUBBORN_MAX_MEASURES=256
+  t=${TYPE#*.}
+  spec=${t#*.}
+  t=${t%.*}
+  case $spec in
+    "R05")
+      #Default value
+      #CORUNNER_READ_0="0x20000000"
+      #CORUNNER_READ_1="0x20000000"
+      ;;
+    "R15")
+      CORUNNER_READ_0="0x60000000"
+      CORUNNER_READ_1="0x60000000"
+      ;;
+    "LH")
+      EEBPCR="03000002"
+      export EEBPCR
+      ;;
+    "HL")
+      EEBPCR="03000020"
+      export EEBPCR
+      ;;
+    "S001")
+      DDR_SIZE=268435456
+      STEP_START=125
+      LAST_ADDR=268435456
+      step=1073741.824
+      ;;
+    "S005")
+      DDR_SIZE=268435456
+      STEP_START=25
+      LAST_ADDR=268435456
+      step=5368709.12
+      ;;
+esac
+
+  step=${step:-}
   ref="${t}05-COFF"
-  cmd="run_places 0 $t"
+  cmd="run_places 0 $t $step"
   r_args="$t 0 $ref"
 elif [ "x$TYPE" = x"cpuPri" ]; then
-  STUBBORN_MAX_MEASURES=512
+  STUBBORN_MAX_MEASURES=256
   ref="ref-coff"
   cmd="run_cpu_pri_H 0"
   r_args="H 0 $ref"

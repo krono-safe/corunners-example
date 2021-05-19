@@ -5,6 +5,9 @@ CORUNNER_READ_0="0x20000000"
 CORUNNER_READ_1="0x20000000"
 DDR_SIZE=2147483648
 LAST_ADDR=2147083648
+STEP_START=1
+SCALE=3
+ADDR_PRE="\"address\":"
 
 bcq(){
   ar=${2:-}
@@ -121,11 +124,10 @@ gen_pri(){
 #     Task/Core C0  C1  Local Out                     memplace caches
   run $1 $core  $C0 $C1 OFF   "$TRACES_DIR/$4.bin"    OFF      OFF
 }
-
 gen_place(){
   get_co $2
 #                       Task               Corunner
-  kmem_gen_config_setup "\"address\": $3" "\"address\": $4"
+  kmem_gen_config_setup "$ADDR_PRE $3" "$ADDR_PRE $4"
 #     Task/Core C0  C1  Local Out  memplace caches
   run $1 $core  $C0 $C1 OFF   "$5" ON       OFF
 }
@@ -141,8 +143,6 @@ place_str(){
   fi
 }
 
-STEP_START=1
-SCALE=3
 gen_places(){
   t="$1"
   c="$2"
@@ -230,19 +230,19 @@ run_cpu_pri_H(){
 }
 
 run_places(){
-  t="$2"
+  step=${3:-26843545.6}
 # For RDB
 #  DDR_SIZE=1073741824
 #  LAST_ADDR=1053741824
 #             TASK/Core co_step     task_addr
-#  gen_all     $t $1     26843545.6  536870912
-#  gen_all     $t $1     26843545.6
+#  gen_all     $t $1     $step  536870912
+#  gen_all     $t $1     $step
 # For DS
-  STEP_START=74
-  gen_places  $t $1     26843545.6  536870912
-  gen_places  $t $1     26843545.6  1073741824
-  gen_places  $t $1     26843545.6  1610612736
-  gen_places  $t $1     26843545.6
+ # STEP_START=199
+  gen_places  $2 $1     $step  536870912
+  gen_places  $2 $1     $step  1073741824
+  gen_places  $2 $1     $step  1610612736
+  gen_places  $2 $1
 }
 
 run_Hsram() {
