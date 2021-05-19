@@ -125,9 +125,9 @@ for el in config['elements']:
     reg_name = sec['region'] if 'region' in sec.keys() else find_reg_name()
     for reg in kmem['kmemory']['regions']:
       if reg['name'] == reg_name:
+        if 'domains' not in reg.keys():
+          reg['domains'] = list()
         if 'address' not in sec.keys():
-          if 'domains' not in reg.keys():
-            reg['domains'] = list()
           if not reg['domains']:
             secs_2[0][1]['output_sections'][0]['physical_address'] = reg['physical_address']
           for s in secs_2:
