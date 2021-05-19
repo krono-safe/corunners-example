@@ -114,7 +114,8 @@ not_supported() {
 generate_R() {
   extra_args=
   script="mkdata.py"
-  if [ "${TYPE%%.*}" = "places" ] || [ "$TYPE" = "cpuPri" ]; then
+  echo $@
+  if [ "${TYPE%%.*}" = "places" ] || [ "$TYPE" = "cpuPri" ] || { [ "$PRODUCT" = "$P2020" ] && [ "$TYPE" = "Hsram" ]; }; then
     bins="
                   --traces-dir '$TRACES_DIR' \\
     "
@@ -180,9 +181,16 @@ elif [ "x$TYPE" = x"H" ]; then
   cmd='run_H'
   r_args='H'
 elif [ "x$TYPE" = x"Hsram" ]; then
-  STUBBORN_MAX_MEASURES=512
+  STUBBORN_MAX_MEASURES=256
+  t='U'
+  ref="${t}SRAM-COFF"
   cmd='run_Hsram'
-  r_args='H'
+  if [ "$PRODUCT" = "$P2020" ]; then
+    cmd+="  0 $t"
+    r_args="$t 0 $ref"
+  else
+    r_args='H'
+  fi
 elif [ "x${TYPE%%.*}" = x"places" ]; then
   STUBBORN_MAX_MEASURES=256
   t=${TYPE#*.}
