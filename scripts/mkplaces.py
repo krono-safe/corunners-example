@@ -13,6 +13,7 @@ from scriptutil import get_nodes_to_ea, decode_file, gen_json_data, calc, substi
 P2020 = environ.get('P2020','power-qoriq-p2020-ds-p')
 MPC5777M = environ.get('MPC5777M',  'power-mpc5777m-evb')
 NVAL = int(environ.get('STUBBORN_MAX_MEASURES', '1024'))
+NO_SEP = bool(environ.get('NO_SEP', ''))
 
 R_SCRIPT = str()
 
@@ -62,9 +63,10 @@ TESTS_R_TEMPLATE = """
 p <- plt(values~sample, data=data,
     subset=grepl("${task}-", sample), drop=T,
     col=gray.colors(${sets},rev=T,start=0.4,end=0.8,alpha=1),
-    cex.axis=${sets}/4,
+    #cex.axis=34,
+    cex.axis=${sets}/3.1,
     las=2,
-    lwd=${sets}/8,
+    lwd=${sets}/6,
     #side="left",
     plotCentre="line",
     pchMed=seq(0, ${sets},1),
@@ -75,7 +77,11 @@ title(ylab="Time (ms)",
     line=1.2*${sets},
     cex.lab=2*${sets}/3,
 )
-title(main=bquote(${ea0}[${ea1_}] ~ "(n="*.(n)*", pos=${pos})"),
+pos <- "${pos}"
+if(pos != ""){
+  pos <- bquote(", pos="*.(pos))
+}
+title(main=bquote(${ea0}[${ea1_}] ~ "(n="*.(n)*.(pos)*")"),
     cex.main=${sets},
 )
 abline(v=(seq(1, ${sets},1)), col="black", lty="dotted", lwd=${sets}/4)
@@ -130,9 +136,16 @@ def gen_r_script(data, layout, sets, out_dir):
   def complete_script(template, context):
     global R_SCRIPT
     R_SCRIPT += substi_temp(template, context)
+  def complete_test(ea, sets, task):
+    complete_script(TESTS_R_TEMPLATE, {'ea0': ea[0],
+                                    'ea1_': ea[1:],
+                                    'sets': sets,
+                                    'pos': task[1:],
+                                    'task': task})
 
   rows, cols = check_layout(layout)
   ns = 0
+  m = 0
   info_set = sorted(set(list(data.values())[0]['sample']))
   tests = {}
   ntests = len(info_set)
@@ -142,10 +155,16 @@ def gen_r_script(data, layout, sets, out_dir):
     if t not in tests.keys():
       tests[t] = list()
     tests[t].append(c)
+    if not NO_SEP:
+      l = len(tests[t])
+      if l > m:
+        m = l
+  if NO_SEP:
+    m = sets
 
   complete_script(R_SCRIPT_HEADER_TEMPLATE, {'rows': 1,
                                              'cols': 1,
-                                             'sets': sets})
+                                             'sets': m})
 
 
   for ea in [g for r in layout for g in r if g]:
@@ -153,13 +172,12 @@ def gen_r_script(data, layout, sets, out_dir):
     ns += n
     complete_script(EA_R_TEMPLATE, {'ea': ea,
                                     'n': n})
-
-    for task in tests.keys():
-      complete_script(TESTS_R_TEMPLATE, {'ea0': ea[0],
-                                      'ea1_': ea[1:],
-                                      'sets': sets,
-                                      'pos': task[1:],
-                                      'task': task})
+    if not NO_SEP:
+      for task in tests.keys():
+        complete_test(ea, len(tests[task]), task)
+    else:
+      complete_test(ea, sets, "")
+      complete_test
 
   complete_script(R_SCRIPT_FOOTER_TEMPLATE, {"ns": ns,
                                              "nt": NVAL})
@@ -279,7 +297,6 @@ def main(argv):
       name = str(f.stem).upper()
       data[name] = decode_file(f, args.timer)
       groups[name] = (f"Core {cores[0]}", "ON", False)
-
   layout = LAYOUTS[args.task]
 
   jdata = gen_json_data(data, ea_to_name, args.output_dir, groups)

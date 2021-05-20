@@ -124,6 +124,14 @@ gen_pri(){
 #     Task/Core C0  C1  Local Out                     memplace caches
   run $1 $core  $C0 $C1 OFF   "$TRACES_DIR/$4.bin"    OFF      OFF
 }
+
+gen_l1(){
+  activate_caches $3
+  get_co $2
+#     Task/Core C0  C1  Local Out                     memplace caches
+  run $1 $core  $C0 $C1 OFF   "$TRACES_DIR/$4.bin"    OFF      OFF
+}
+
 gen_place(){
   get_co $2
 #                       Task               Corunner
@@ -207,8 +215,8 @@ run_H() {
   #sym=""
 }
 
-run_cpu_pri_H(){
-  t="H"
+run_cpu_pri(){
+  t="$2"
 #         Task/Core EEBPCR      Out
   gen_pri $t -$1    "01000000"  "ref-coff"
   gen_pri $t $1     "03000000"  "low-low"
@@ -227,6 +235,25 @@ run_cpu_pri_H(){
   gen_pri $t $1     "03000031"  "res-sec"
   gen_pri $t $1     "03000032"  "res-hight"
   gen_pri $t $1     "03000033"  "res-res"
+}
+
+run_l1(){
+  t="$2"
+  cor_c=$(bcq "$1-1")
+  cor_c=${cor_c#-}
+#        Task/Core  l1                        Out
+  gen_l1 $t -$1     ""                        "${t}-COFF"
+  gen_l1 $t $1      ""                        "${t}-C"
+  gen_l1 $t $1      "i$cor_c"                 "${t}-C_I"
+  gen_l1 $t $1      "i$cor_c d$cor_c"         "${t}-C_ID"
+  gen_l1 $t -$1     "i$1"                     "${t}_I-COFF"
+  gen_l1 $t $1      "i$1"                     "${t}_I-C"
+  gen_l1 $t $1      "i$1 i$cor_c"             "${t}_I-C_I"
+  gen_l1 $t $1      "i$1 i$cor_c d$cor_c"     "${t}_I-C_ID"
+  gen_l1 $t -$1     "i$1 d$1"                 "${t}_ID-COFF"
+  gen_l1 $t $1      "i$1 d$1"                 "${t}_ID-C"
+  gen_l1 $t $1      "i$1 d$1 i$cor_c"         "${t}_ID-C_I"
+  gen_l1 $t $1      "i$1 d$1 i$cor_c d$cor_c" "${t}_ID-C_ID"
 }
 
 run_places(){

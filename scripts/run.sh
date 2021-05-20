@@ -19,10 +19,10 @@ ROOT=${ROOT:-`pwd`}
 GENONLY=${GENONLY:-}
 
 usage() {
-  echo "Usage: $0 -T H|G|U|flash|flash2|Hsram|Hplaces|cpuPri -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$P2020|$MPC5777M> [-g] [-h]
+  echo "Usage: $0 -T H|G|U|flash|flash2|Hsram|places.<task>.<test>|cpuPri|l1 -P <psyko> -k <rtk_dir> -t <runner> -d <kdbv> -p <$P2020|$MPC5777M> [-g] [-h]
 
   -P <psyko>    Path to the PsyC compiler
-  -T H|U|G|flash|flash2|Hsram|Hplaces|cpuPri
+  -T H|U|G|flash|flash2|Hsram|places<task>.<test>|cpuPri|l1
                 Type of run (required choice)
   -d <kdbv>     Path to the kdbv program
   -k <rtk_dir>  Path to the ASTERIOS RTK
@@ -38,6 +38,20 @@ Alternatively you can use the following environment variables to set the require
   HOOK
   PRODUCT
   GENONLY
+For the 'places' test:
+  The differents tasks are:
+    H
+    G
+    U
+    flash
+    flash2
+  The differents tests are:
+    R05 for read at 0.5G of the DDR
+    R15 for read at 1.5G of the DDR
+    HL the first core has a higher priority than the second
+    LH the first core has a lower priority than the second
+    S001 the step is 1M
+    S005 the step is 5M
 "
 }
 
@@ -99,6 +113,7 @@ source "$(pwd)/scripts/run.$PRODUCT.sh"
 TRACES_DIR="$(pwd)/traces/${TYPE}"
 BUILD_DIR="$(pwd)/build/${TYPE}"
 OUTDIR="$ROOT/out_$PRODUCT"
+NO_SEP=
 sym="--symetric"
 rm "$TRACES_DIR/times.log" || true
 
@@ -115,7 +130,7 @@ generate_R() {
   extra_args=
   script="mkdata.py"
   echo $@
-  if [ "${TYPE%%.*}" = "places" ] || [ "$TYPE" = "cpuPri" ] || { [ "$PRODUCT" = "$P2020" ] && [ "$TYPE" = "Hsram" ]; }; then
+  if [ "${TYPE%%.*}" = "places" ] || [ "$TYPE" = "cpuPri" ] || [ "$TYPE" = "l1" ] || { [ "$PRODUCT" = "$P2020" ] && [ "$TYPE" = "Hsram" ]; }; then
     bins="
                   --traces-dir '$TRACES_DIR' \\
     "
@@ -182,6 +197,7 @@ elif [ "x$TYPE" = x"H" ]; then
   r_args='H'
 elif [ "x$TYPE" = x"Hsram" ]; then
   STUBBORN_MAX_MEASURES=256
+  NO_SEP=ON
   t='U'
   ref="${t}SRAM-COFF"
   cmd='run_Hsram'
@@ -235,13 +251,20 @@ esac
 elif [ "x$TYPE" = x"cpuPri" ]; then
   STUBBORN_MAX_MEASURES=256
   ref="ref-coff"
-  cmd="run_cpu_pri_H 0"
+  cmd="run_cpu_pri 0 H"
+  r_args="U 0 $ref"
+elif [ "x$TYPE" = x"l1" ]; then
+  NO_SEP=ON
+  STUBBORN_MAX_MEASURES=256
+  ref="U-COFF"
+  cmd="run_l1 0 H"
   r_args="H 0 $ref"
 else
   echo "*** Unknown argument '$TYPE'"
   exit 1
 fi
 
+export NO_SEP
 export STUBBORN_MAX_MEASURES
 [ -z "$GENONLY" ] && eval "$cmd"
 generate_R $r_args
