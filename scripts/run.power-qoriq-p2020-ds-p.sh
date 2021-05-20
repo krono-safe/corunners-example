@@ -8,6 +8,7 @@ LAST_ADDR=2147083648
 STEP_START=1
 SCALE=3
 ADDR_PRE="\"address\":"
+FIRST=T
 
 bcq(){
   ar=${2:-}
@@ -26,7 +27,6 @@ kmem_gen_config_setup(){
 activate_caches(){
   for arg in $*; do
     eval "$arg='true'"
-    eval "echo \$$arg"
   done
   i0=${i0:-false}
   d0=${d0:-false}
@@ -160,7 +160,7 @@ gen_places(){
   nb=$(bcq "$DDR_SIZE/$step - 1")
   t_str=$(place_str "$t_pl" "$step")
 
-  [ "$STEP_START" = 1 ] && \
+  { [ "$STEP_START" = 1 ] || [ "$FIRST" = T ]; }&& \
     gen_place "$t" "-$c" "$t_pl" 0 "$TRACES_DIR/$t$t_str-COFF.bin"
 
   for i in $(seq $STEP_START $nb); do
@@ -245,14 +245,22 @@ run_l1(){
   gen_l1 $t -$1     ""                        "${t}-COFF"
   gen_l1 $t $1      ""                        "${t}-C"
   gen_l1 $t $1      "i$cor_c"                 "${t}-C_I"
+  gen_l1 $t $1      "d$cor_c"                 "${t}-C_D"
   gen_l1 $t $1      "i$cor_c d$cor_c"         "${t}-C_ID"
   gen_l1 $t -$1     "i$1"                     "${t}_I-COFF"
   gen_l1 $t $1      "i$1"                     "${t}_I-C"
   gen_l1 $t $1      "i$1 i$cor_c"             "${t}_I-C_I"
   gen_l1 $t $1      "i$1 i$cor_c d$cor_c"     "${t}_I-C_ID"
+  gen_l1 $t $1      "i$1 d$cor_c"             "${t}_I-C_D"
+  gen_l1 $t -$1     "i$1"                     "${t}_D-COFF"
+  gen_l1 $t $1      "i$1"                     "${t}_D-C"
+  gen_l1 $t $1      "i$1 i$cor_c"             "${t}_D-C_I"
+  gen_l1 $t $1      "i$1 d$cor_c"             "${t}_D-C_D"
+  gen_l1 $t $1      "i$1 i$cor_c d$cor_c"     "${t}_D-C_ID"
   gen_l1 $t -$1     "i$1 d$1"                 "${t}_ID-COFF"
   gen_l1 $t $1      "i$1 d$1"                 "${t}_ID-C"
   gen_l1 $t $1      "i$1 d$1 i$cor_c"         "${t}_ID-C_I"
+  gen_l1 $t $1      "i$1 d$1 d$cor_c"         "${t}_ID-C_D"
   gen_l1 $t $1      "i$1 d$1 i$cor_c d$cor_c" "${t}_ID-C_ID"
 }
 
@@ -266,6 +274,7 @@ run_places(){
 #  gen_all     $t $1     $step
 # For DS
  # STEP_START=199
+ # FIRST=F
   gen_places  $2 $1     $step  536870912
   gen_places  $2 $1     $step  1073741824
   gen_places  $2 $1     $step  1610612736
@@ -281,6 +290,7 @@ run_Hsram() {
   export CORUNNER_READ_SIZE_0
   export CORUNNER_READ_SIZE_1
 
+  gen_place "$t" "-$c" "\"ddr\"" "\"\"" "$TRACES_DIR/${t}DDR-COFF.bin"
   gen_place "$t" "-$c" "\"l2sram\"" "\"\"" "$TRACES_DIR/${t}SRAM-COFF.bin"
   gen_place "$t" "$c" "\"l2sram\"" "\"ddr\"" "$TRACES_DIR/${t}SRAM-CDDR.bin"
   CORUNNER_READ_0="0x80000000"

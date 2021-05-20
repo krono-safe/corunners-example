@@ -256,7 +256,7 @@ elif [ "x$TYPE" = x"cpuPri" ]; then
 elif [ "x$TYPE" = x"l1" ]; then
   NO_SEP=ON
   STUBBORN_MAX_MEASURES=256
-  ref="U-COFF"
+  ref="H-COFF"
   cmd="run_l1 0 H"
   r_args="H 0 $ref"
 else
