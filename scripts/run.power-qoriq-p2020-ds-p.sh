@@ -290,8 +290,8 @@ run_Hsram() {
   export CORUNNER_READ_SIZE_0
   export CORUNNER_READ_SIZE_1
 
-  gen_place "$t" "-$c" "\"ddr\"" "\"\"" "$TRACES_DIR/${t}DDR-COFF.bin"
   gen_place "$t" "-$c" "\"l2sram\"" "\"\"" "$TRACES_DIR/${t}SRAM-COFF.bin"
+  gen_place "$t" "-$c" "\"ddr\"" "\"\"" "$TRACES_DIR/${t}DDR-COFF.bin"
   gen_place "$t" "$c" "\"l2sram\"" "\"l2sram\"" "$TRACES_DIR/${t}SRAM-CSRAM_DDR.bin"
   gen_place "$t" "$c" "\"l2sram\"" "\"ddr\"" "$TRACES_DIR/${t}SRAM-CDDR_DDR.bin"
   CORUNNER_READ_0="0x80000000"
