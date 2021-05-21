@@ -14,8 +14,10 @@ P2020 = environ.get('P2020','power-qoriq-p2020-ds-p')
 MPC5777M = environ.get('MPC5777M',  'power-mpc5777m-evb')
 NVAL = int(environ.get('STUBBORN_MAX_MEASURES', '1024'))
 NO_SEP = bool(environ.get('NO_SEP', ''))
+IGN = environ.get('TRACE_IGN', '').split(':')
 
 R_SCRIPT = str()
+OF = 'out'
 
 LAYOUTS = {
   "G": [
@@ -42,7 +44,7 @@ library("vioplot")
 #  - https://www.r-graph-gallery.com/9-ordered-boxplot.html#grouped
 #  - https://www.r-graph-gallery.com/96-boxplot-with-jitter.html
 
-pdf(file="out.pdf", 7.5*${sets}, 7.5*${sets})
+pdf(file="${onefile}.pdf", 7.5*${sets}, 7.5*${sets})
 par(mfrow=c(${rows},${cols}), mar=${sets}*c(3,3,1,1), oma=${sets}*c(0,0,1,0), lheight=${sets}, page=T)
 """
 
@@ -164,7 +166,8 @@ def gen_r_script(data, layout, sets, out_dir):
 
   complete_script(R_SCRIPT_HEADER_TEMPLATE, {'rows': 1,
                                              'cols': 1,
-                                             'sets': m})
+                                             'sets': m,
+                                             'onefile': OF})
 
 
   for ea in [g for r in layout for g in r if g]:
@@ -280,6 +283,9 @@ def main(argv):
       }
     }
   """
+  if IGN and IGN != ['']:
+    global OF
+    OF += '_zoomed'
   args = getopts(argv)
   if args.corunner_core == None:
     args.corunner_core = abs(1-args.core)
@@ -292,11 +298,14 @@ def main(argv):
 
   data = {}
   groups = {}
+  print(IGN)
   for f in args.traces_dir.iterdir():
     if f.suffix == '.bin':
       name = str(f.stem).upper()
-      data[name] = decode_file(f, args.timer)
-      groups[name] = (f"Core {cores[0]}", "ON", False)
+      if name not in IGN:
+        print(name)
+        data[name] = decode_file(f, args.timer)
+        groups[name] = (f"Core {cores[0]}", "ON", False)
   layout = LAYOUTS[args.task]
 
   jdata = gen_json_data(data, ea_to_name, args.output_dir, groups)
