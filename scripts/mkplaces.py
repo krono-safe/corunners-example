@@ -46,6 +46,7 @@ library("vioplot")
 
 pdf(file="${onefile}.pdf", 7.5*${sets}, 7.5*${sets})
 par(mfrow=c(${rows},${cols}), mar=${sets}*c(3,3,1,1), oma=${sets}*c(0,0,1,0), lheight=${sets}, page=T)
+par(xaxt="n")
 """
 
 EA_R_TEMPLATE = """
@@ -83,6 +84,8 @@ pos <- "${pos}"
 if(pos != ""){
   pos <- bquote(", pos="*.(pos))
 }
+axis(1, las = 2, at=seq(1, ${sets}, by=1), labels = F)
+text(seq(1,${sets},by=1), par()$$usr[3] - 1.2, labels = as.vector(sort(unique(data$$sample))), srt=35, xpd=T, cex=${sets}/5, adj=1)
 title(main=bquote(${ea0}[${ea1_}] ~ "(n="*.(n)*.(pos)*")"),
     cex.main=${sets},
 )

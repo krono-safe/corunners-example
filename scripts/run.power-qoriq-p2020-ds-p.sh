@@ -307,4 +307,9 @@ run_Hsram() {
   CORUNNER_READ_1="0x80040000"
   gen_place "$t" "$c" "\"l2sram\"" "\"ddr\"" "$TRACES_DIR/${t}R1-CDDR_R2.bin"
   gen_place "$t" "$c" "\"l2sram\"" "\"l2sram\"" "$TRACES_DIR/${t}R1-CR1_R2.bin"
+  ADDR_PRE=
+  gen_place "$t" "$c" "\"region\":\"l2sram\"" "\"address\":2147745792" "$TRACES_DIR/${t}R1-CR2_R2.bin"
+  CORUNNER_READ_0="0x80000000"
+  CORUNNER_READ_1="0x80000000"
+  gen_place "$t" "$c" "\"region\":\"l2sram\"" "\"address\":2147745792" "$TRACES_DIR/${t}R1-CR2_R1.bin"
 }
