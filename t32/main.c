@@ -19,10 +19,12 @@
 #define DIE(Code, Fmt, ...) \
   do { \
     fprintf(stderr, "*** " Fmt " (error code: %i)\n", ## __VA_ARGS__, Code); \
+    free(BUFFER); \
     exit(Code); \
   } while (0)
 
 
+static uint8_t *BUFFER;
 
 
 /**
@@ -249,18 +251,19 @@ int main(const int argc, const char *const argv[argc])
   const char *const logfile = argv[3];
   struct timeval stop, start;
   const char *const envval = getenv("STUBBORN_MAX_MEASURES");
-  static uint8_t *BUFFER;
-  unsigned int buff_len = 1024;
+  unsigned int buff_len = 1024u;
   /* We have a buffer of n elements (1024 by default), each element being a
    * structure of size 24.  These are hard-coded parameters, not that great, but *
    * it will do */
   if(envval)
   {
-    if(sscanf(envval, "%d", &buff_len) != 1)
-    { buff_len = 1024; }
+    if(sscanf(envval, "%u", &buff_len) != 1)
+    { buff_len = 1024u; }
   }
 
-  BUFFER = calloc(buff_len, BUFF_EL_SIZE);
+  if((BUFFER=calloc(buff_len, BUFF_EL_SIZE)) == NULL)
+  { DIE(errno, "Could not allocate the buffer: %s", strerror(errno)); }
+
   buff_len *= BUFF_EL_SIZE;
 
   /* Make sure we will (almost) always terminate the program by leaving T32 in
@@ -331,6 +334,7 @@ int main(const int argc, const char *const argv[argc])
   LOG(file, "Execution_time for %s: %lu ms.\n", output,
       (stop.tv_sec - start.tv_sec) * 1000 + (stop.tv_usec - start.tv_usec)/1000);
   fclose(file);
+  free(BUFFER);
 
   return 0;
 }

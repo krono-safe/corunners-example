@@ -79,7 +79,6 @@ for (i in 1:length(lvl)) {{
 """
 
 R_SCRIPT_FOOTER_TEMPLATE = """
-# Total n: ${ns} (should be 1024)
 dev.off()\n
 """
 
@@ -118,16 +117,15 @@ def getopts(argv):
     parser.add_argument("--c1-on", type=Path, required=False)
     parser.add_argument("--output-dir", "-o", type=Path, required=True)
     parser.add_argument("--task", choices=["G", "H", 'U'], required=True)
-    parser.add_argument("--timer", type=float, default=5e6)
+    parser.add_argument("--timer", type=float, required=True)
     parser.add_argument("--stats", action='store_true')
     parser.add_argument("--output-json", type=Path)
-    parser.add_argument('--symetric', '-s', action='store_true')
     parser.add_argument("--product", "-p", type=str, required=True,
                         choices=[P2020,MPC5777M])
     return parser.parse_args(argv[1:])
 
 
-def gen_r_script(data, layout, out_dir, symetric):
+def gen_r_script(data, layout, out_dir):
     def complete_script(template, context):
         global R_SCRIPT
         R_SCRIPT += substi_temp(template, context)
@@ -136,10 +134,7 @@ def gen_r_script(data, layout, out_dir, symetric):
     complete_script(R_SCRIPT_HEADER_TEMPLATE, {"rows": rows,
                                                "cols": cols})
     ns = 0
-    if symetric:
-        sets = 4
-    else:
-        sets = 2
+    sets = 4
 
     for row in layout:
         for ea in row:
@@ -161,7 +156,7 @@ def gen_r_script(data, layout, out_dir, symetric):
         stream.write(R_SCRIPT)
 
 
-def gen_stats(data, symetric, cores, tex_name):
+def gen_stats(data, cores, tex_name):
     text = substi_temp(LATEX_HEADER_TEMPLATE, {"core0": cores[0],
                                                "core1": cores[1]})
     for ea, info in sorted(data.items()):
@@ -169,9 +164,8 @@ def gen_stats(data, symetric, cores, tex_name):
             C0_OFF: 0.0,
             C0_ON: 0.0,
         }
-        if symetric:
-            values[C1_OFF] = 0.0
-            values[C1_ON] = 0.0
+        values[C1_OFF] = 0.0
+        values[C1_ON] = 0.0
 
         for value, sample in zip(info["values"], info["sample"]):
             assert sample in values, f"Unknown sample {sample}"
@@ -185,13 +179,12 @@ def gen_stats(data, symetric, cores, tex_name):
         else:
             text += f"{r0:.3f}"
         text += ' & '
-        if symetric:
-            r1 = calc(values[C1_OFF], values[C1_ON])
-            text += f"{values[C1_OFF]:.3f} & {values[C1_ON]:.3f} &"
-            if r1 > 0.01:
-                text += r'\textbf{' + f"{r1:.3f} " + r'} '
-            else:
-                text += f"{r1:.3f}"
+        r1 = calc(values[C1_OFF], values[C1_ON])
+        text += f"{values[C1_OFF]:.3f} & {values[C1_ON]:.3f} &"
+        if r1 > 0.01:
+            text += r'\textbf{' + f"{r1:.3f} " + r'} '
+        else:
+            text += f"{r1:.3f}"
         text += r'\\'+'\n'
     text += LATEX_FOOTER
     print("To include the stats tex file add: '\input{", tex_name,"}' where you wants to include it", sep='')
@@ -239,9 +232,8 @@ def main(argv):
     else:
         cores = [1, 2]
 
-    if args.symetric:
-        data[C1_OFF] = decode_file(args.c1_off, args.timer)
-        data[C1_ON] =  decode_file(args.c1_on, args.timer)
+    data[C1_OFF] = decode_file(args.c1_off, args.timer)
+    data[C1_ON] =  decode_file(args.c1_on, args.timer)
 
     layout = LAYOUTS[args.task]
 
@@ -250,15 +242,14 @@ def main(argv):
         C0_ON: (f"Core {cores[0]}", "ON", False),
     }
 
-    if args.symetric:
-        groups[C1_OFF] = (f"Core {cores[1]}", "OFF", False)
-        groups[C1_ON] = (f"Core {cores[1]}", "ON", False)
+    groups[C1_OFF] = (f"Core {cores[1]}", "OFF", False)
+    groups[C1_ON] = (f"Core {cores[1]}", "ON", False)
 
     jdata = gen_json_data(data, ea_to_name, args.output_dir, groups)
-    gen_r_script(jdata, layout, args.output_dir, args.symetric)
+    gen_r_script(jdata, layout, args.output_dir)
 
     if args.stats:
-        gen_stats(jdata, args.symetric, cores, args.output_dir.resolve() / f"stats_{args.task}")
+        gen_stats(jdata, cores, args.output_dir.resolve() / f"stats_{args.task}")
     if args.output_json is not None:
         with open(args.output_json, "w") as outp:
             json.dump(jdata, outp, indent=2)

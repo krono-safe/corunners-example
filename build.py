@@ -5,11 +5,15 @@ from pathlib import Path
 import subprocess
 import sys
 import scripts.templates
-from scripts.templates import *
+from scripts.templates import P2020, MPC5777M, CORES, TOP_DIR, PSY_DIR, STUBS_DIR, SRC_DIR, CFG_DIR, Help, AGENT_CONFIG_HJSON_TEMPLATE, CORUNNER_CONFIG_HJSON_TEMPLATE, CORUNNER_KMEMORY_JSON_TEMPLATE, COMPILE_CONFIG_HJSON_TEMPLATE, PSYMODULE_CONFIG_HJSON_TEMPLATE, FLASHLIKE
 from scripts.scriptutil import load_db, load_json, dump_json, write_template, psyko
 from operator import itemgetter
 
-def cor_par(s):
+def corunner_to_list(s):
+  """
+  This function takes the corunner string (a comma separated list: <core>,<start address of read>) and returns a python list of the same form (with none as second element if there is only a core). This allows to set a start address for each corunner in case there is at least two.
+  Should not be used except as an argument parser type.
+  """
   pars = s.split(',')
   pars[0] = int(pars[0])
   assert pars[0] in CORES, \
@@ -17,7 +21,7 @@ def cor_par(s):
   l = len(pars)
   if l > 2:
     raise argparse.ArgumentTypeError("Corunners parameters must be of type <core>,<start address of read>")
-  elif l == 2:
+  elif l == 2 and pars[1] != '':
     return pars
   else:
     return [pars[0], None]
@@ -35,7 +39,7 @@ def getopts(argv):
     parser.add_argument("--product", "-p", type=str,
                         help=Help.PRODUCT,  required=True,
                         choices=[P2020,MPC5777M])
-    parser.add_argument("--corunner", "-C", type=cor_par,
+    parser.add_argument("--corunner", "-C", type=corunner_to_list,
                         action="append", help=Help.CORUNNER, default=[])
     parser.add_argument("--task", "-T", type=str, choices=["H", "G"]+FLASHLIKE,
                         help=Help.TASK, required=True)
@@ -71,18 +75,18 @@ def gen_corunner_config(conf_filename, identifier, symbol, object_file, kmem_fil
         'symbol': symbol,
     })
 
-def gen_corunner_source(output_filename, symbol, sram=dict()):
+def gen_corunner_source(output_filename, symbol, read=dict()):
     cmd = [sys.executable, TOP_DIR / "scripts" / "gen-corunner.py", symbol]
-    if sram:
-        cmd += ["--sram"]
-        if 'nop' in sram.keys():
-          cmd += ["--nop", str(sram['nop'])]
-        if 'start' in sram.keys():
-          cmd += ["--startaddr", str(sram['start'])]
-        if 'size' in sram.keys():
-          cmd += ["--tablesize", str(sram['size'])]
-        if 'stride' in sram.keys():
-          cmd += ["--stride", str(sram['stride'])]
+    if read:
+        cmd += ["--read"]
+        if 'nop' in read:
+          cmd += ["--nop", str(read['nop'])]
+        if 'start' in read:
+          cmd += ["--startaddr", str(read['start'])]
+        if 'size' in read:
+          cmd += ["--tablesize", str(read['size'])]
+        if 'stride' in read:
+          cmd += ["--stride", str(read['stride'])]
     else:
         cmd += ["--jump", "2048"]
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True) as proc:
@@ -111,8 +115,9 @@ def gen_kmem_final(default, config, memreport, kdbv, tasks, corunners=list()):
 
     dump_json(config_json, config)
 
-    ret = subprocess.Popen(cmd).wait()
-    assert ret == 0
+    ret = subprocess.check_call(cmd)
+    #ret = subprocess.Popen(cmd).wait()
+    #assert ret == 0
 
 def get_sources(task_name):
     c_sources = [
@@ -154,25 +159,25 @@ def main(argv):
     tasks = [f'task_{args.task}']
     part_configs = []
     compile_config = args.build_dir / "compile.hjson"
-    link_config = args.build_dir / "link.hjson"
     partition_config = args.build_dir / "partition.hjson"
     psymodule_config = args.build_dir / "psymodule.hjson"
     gen_agent_config(ag_config, f"task_{args.task}", args.core)
     mem_configs = []
     corunners = []
     for corunner,  cor_start in args.corunner:
-        use_sram = bool(cor_start)
-        sram_args = dict()
+        # The read corunner is created only if a start address si provided for this corunner.
+        use_read = bool(cor_start)
+        read_args = dict()
         co_config = args.build_dir / f"corunner_{corunner}.hjson"
         co_kmem = args.build_dir / f"corunner_{corunner}_kmem.json"
         co_file = args.build_dir / f"corunner_{corunner}"
-        if use_sram:
-            sram_args['start'] = cor_start
-            sram_args['size'] = int(env.get(f"CORUNNER_READ_SIZE_{corunner}", "0x2000"), 16)
-        symbol = f"co_runner_sram{corunner}" if sram_args else f"co_runner_flash{corunner}"
+        if use_read:
+            read_args['start'] = cor_start
+            read_args['size'] = int(env.get(f"CORUNNER_READ_SIZE_{corunner}", "0x2000"), 16)
+        symbol = f"co_runner_read{corunner}" if read_args else f"co_runner_flash{corunner}"
         co_file = co_file.with_suffix('.asm')
         sources["asm"].append(co_file)
-        gen_corunner_source(co_file, symbol, sram_args)
+        gen_corunner_source(co_file, symbol, read_args)
 
         app_configs.append(co_config)
         mem_configs.append(co_kmem)
@@ -185,12 +190,8 @@ def main(argv):
         app_configs.append(stub_config)
         tasks.append(f'sends_to_task_{args.task}')
 
-  #  app_configs.append(link_config)
-
     write_template(compile_config, COMPILE_CONFIG_HJSON_TEMPLATE, {})
     write_template(psymodule_config, PSYMODULE_CONFIG_HJSON_TEMPLATE, {})
-    write_template(link_config, LINK_CONFIG_HJSON_TEMPLATE, {})
-
 
 
     #==========================================================================
@@ -216,7 +217,7 @@ def main(argv):
     def psyko_partition(name, objects, configs):
         generated_object = args.build_dir / (name + ".parto")
         psyko(psykonf, "partition", "-o", generated_object, '--gendir',
-            args.build_dir / 'gen' / 'part', *objects, *configs)
+              args.build_dir / 'gen' / 'part', *objects, *configs)
         return generated_object
 
     def psyko_app(partos, configs):
@@ -225,13 +226,16 @@ def main(argv):
         psyko(psykonf, "app", "-a", args.build_dir / "program.app", "-b", args.output,
               '--gendir', gendir, *partos, *configs)
         return gendir
-    def psyko_memconf(t, files, configs=list(), cor_kmems=list()):
+    def psyko_memconf(t, files, configs=[], cor_kmems=[]):
+        """
+        This function generates a valid default memconf used to perform the first compilation. It creates a default kmemory for the task and adds the configs for all the corunners.
+        """
         kmemconf = args.build_dir / ('kmemconf_'+t+'.json')
         psyko(psykonf, 'gen-mem-conf', '-t', t, '--gendir', args.build_dir / 'gen' / 'memconf', '-o', kmemconf, *files, *configs)
 
         if cor_kmems:
             def_memconf = load_json(kmemconf)
-            cor_memconf = list()
+            cor_memconf = []
             for kmem in cor_kmems:
                 cor_memconf.append(load_json(kmem))
             max_reg = def_memconf['kmemory']['regions'][0]
@@ -239,8 +243,8 @@ def main(argv):
                 for reg in def_memconf['kmemory']['regions'][1:]:
                     if reg['size'] > max_reg['size']:
                         max_reg = reg
-            if 'domains' not in max_reg.keys():
-                max_reg['domains'] = list()
+            if 'domains' not in max_reg:
+                max_reg['domains'] = []
                 out = cor_memconf[0]['domains'][0]['output_sections'][0]
                 out['physical_address'] = mar_reg['physical_address']
             stacks = {obj['id']: obj

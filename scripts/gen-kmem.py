@@ -34,7 +34,7 @@ parser.add_argument('--out_kmemory', type=Path)
 parser.add_argument("--kdbv", type=Path)
 args = parser.parse_args(sys.argv[1:])
 
-config = load_json(args.config, o=False)
+config = load_json(args.config)
 
 try:
   if not args.default_kmemory:
@@ -54,7 +54,7 @@ kmem = load_json(args.default_kmemory)
 
 sec_sat = dict()
 for sec in memreport['sections']:
-  if 'id_name' in sec.keys():
+  if 'id_name' in sec:
     id_name = sec['id_name']
   else:
     id_name = ''
@@ -66,10 +66,10 @@ for el in config['elements']:
   secs = []
   if el['type'] == 'corunner':
     for reg in kmem['kmemory']['regions']:
-      if 'domains' in reg.keys():
+      if 'domains' in reg:
         del_dom = []
         for dom in reg['domains']:
-          if 'identifier' in dom.keys() and dom['identifier'] in el['names']:
+          if 'identifier' in dom and dom['identifier'] in el['names']:
             d = set()
             for sec in dom['output_sections']:
               d.add(sec['name'])
@@ -83,12 +83,12 @@ for el in config['elements']:
         del sec_sat2[sec]
 
     for reg in kmem['kmemory']['regions']:
-      if 'domains' in reg.keys():
+      if 'domains' in reg:
         del_dom = []
         for dom in reg['domains']:
           d = set()
           for sec in dom['output_sections']:
-            if sec['name'] in sec_sat2.keys():
+            if sec['name'] in sec_sat2:
               d.add(sec['name'])
           if d:
             secs.append([d, deepcopy(dom), reg['name']])
@@ -122,12 +122,12 @@ for el in config['elements']:
         addr = reg['physical_address']
         if addr <= sec['address'] < addr+reg['size']:
           return reg['name']
-    reg_name = sec['region'] if 'region' in sec.keys() else find_reg_name()
+    reg_name = sec['region'] if 'region' in sec else find_reg_name()
     for reg in kmem['kmemory']['regions']:
       if reg['name'] == reg_name:
-        if 'domains' not in reg.keys():
-          reg['domains'] = list()
-        if 'address' not in sec.keys():
+        if 'domains' not in reg:
+          reg['domains'] = []
+        if 'address' not in sec:
           if not reg['domains']:
             secs_2[0][1]['output_sections'][0]['physical_address'] = reg['physical_address']
           for s in secs_2:
@@ -147,7 +147,7 @@ for el in config['elements']:
           dec = False
           def al(os, j):
             align=0
-            if 'alignment' in os.keys():
+            if 'alignment' in os:
               align = os['alignment']**3
             elif j == 0:
               align = 4096
@@ -165,7 +165,7 @@ for el in config['elements']:
             for j in range(0, len(reg2[i]['output_sections'])):
               os = osi[j]
               if not placed:
-                addr2 = os['physical_address'] if 'physical_address' in os.keys() else sec_sat[os['name']][1]
+                addr2 = os['physical_address'] if 'physical_address' in os else sec_sat[os['name']][1]
                 if addr1 < sec['address'] < addr2+sec_sat[os['name']][0]:
                   os0 = osi[0]
                   #os0['physical_address'] = sec_sat[os0['name']][1]
@@ -186,7 +186,7 @@ for el in config['elements']:
                     place_size.append(align)
                   else:
                     break
-              elif 'physical_address' in os.keys():
+              elif 'physical_address' in os:
                 os['physical_address'] = os['physical_address']+sum(place_size)
                 al(os, j)
             if placed and not dec:
@@ -199,8 +199,8 @@ for el in config['elements']:
             for s in secs_2:
               s[1]['output_sections'][0]['physical_address'] = sec['address'] + off
               align_tmp = al(s[1]['output_sections'][0], 0)
-              if 'domains' not in reg.keys():
-                reg['domains'] = list()
+              if 'domains' not in reg:
+                reg['domains'] = []
               reg['domains'].append(s[1])
               off += place_size[secs_2.index(s)] + align_tmp
               align += align_tmp

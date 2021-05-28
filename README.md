@@ -41,6 +41,11 @@ This results in artifacts produced by default in the `build/` directory.
 Unless specified otherwise, the final executable, ready to be flashed on
 a hardware target will reside at path `build/program.elf`.
 
+### Environment variables
+Some environment variables drive the compilation:
+ - P2020 and MPC5777M are the specific product used for these cards;
+ - NVAL is the number of measures that will be performed;
+
 ## Flashing an application
 
 Use the [Trace32][6] scripts provided by the ASTERIOS RTK to flash the
@@ -82,7 +87,7 @@ Run:
   -T <type>
 ```
 
-with:
+With:
 
 - `<path/to/psyko>`, `<path/to/RTK>` and `<path/to/kdbv>` being paths to
   ASTERIOS-specific software.
@@ -133,6 +138,11 @@ generate the `trunner` executable. It takes two arguments:
 1. the path to the CMM script;
 2. the path to the output file in which the measures will be dumped.
 
+## Additional environment variables
+
+ These are not used for the base tasks tests (flash, flash2, G, H and U), and only drive the generation of the results
+ - NO_SEP will make all the plots be printed on the same graph
+ - IGN is a semi-column separated list allowing to ignore some tests on the graphs (This variable should no be set by the user (as there are always overridden by the run script).).
 
 
 ## License
