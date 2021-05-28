@@ -17,7 +17,7 @@ STUBS_DIR = TOP_DIR / "psy" / "stubs"
 
 class Help:
     RTK_DIR = "Path to the ASTERIOS RTK"
-    CORUNNER = "ID of the co-runner to enable and start address of the array read by it if it is the sram type (comma-separated without spaces); can be specified multiple times"
+    CORUNNER = "ID of the co-runner to enable and start address of the array read by it if it is the read type (comma-separated without spaces); can be specified multiple times. If the corunner is the read type, it can be used in combination of the CORUNNER_READ_SIZE_<corunner_id> enironement variable to stpecify the size of the range of the read memory. (else, the default size is 0x2000)"
     TASK = "Name of the nominal task to be compiled for execution"
     PSYKO = "Path to the PsyC Compiler psyko"
     BUILD_DIR = "Path to the build directory in which artifacts are produced"
@@ -71,16 +71,6 @@ COMPILE_CONFIG_HJSON_TEMPLATE = """
             "-X43=0", # Do not insert eieio !
             """ + f'''"-I", "{TOP_DIR}/include",''' + """
         ]
-    }
-}
-"""
-
-LINK_CONFIG_HJSON_TEMPLATE = """
-{
-    link_options: {
-      ldflags: [
-        "-Xunused-sections-list"
-      ]
     }
 }
 """

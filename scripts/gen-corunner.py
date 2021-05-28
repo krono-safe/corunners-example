@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 #
 # This script generates the code of two types of co-runners:
-# * FLASH co-runners, as a finite sequence of unconditional branches, that eventually loops:
+# 1) JUMP co-runners, as a finite sequence of unconditional branches, that eventually loops:
 #
 #   label_0: branch label_1
 #   label_1: branch label_2
@@ -12,7 +12,7 @@
 # Usage:
 #   python3 gen-corunner.py --jumps 1024 > code.asm
 #
-# * SRAM co-runners, as a finite sequence of read and write in memory, that
+# 2) READ co-runners, as a finite sequence of read and write in memory, that
 # eventualy loops:
 #
 #   loop:
@@ -30,7 +30,7 @@
 # nop intructions can be added between each sequence.
 #
 # Usage:
-#   python3 gen-corunner.py --sram --startaddr "0x8000" \
+#   python3 gen-corunner.py --read --startaddr "0x8000" \
 #   --tablesize 1024 --stride 4 --nop 0 > code.asm
 #
 # Both enable to generate code of a fixed size, without having to manually
@@ -40,9 +40,11 @@
 import argparse
 import sys
 
+LOOP_SIZE = 1024
+
 parser = argparse.ArgumentParser()
 parser.add_argument('symbol')
-parser.add_argument('--sram', action='store_true')
+parser.add_argument('--read', action='store_true')
 parser.add_argument('--jumps', type=int, default=1)
 parser.add_argument('--startaddr', type=str, default="0x1380000")
 parser.add_argument('--tablesize', type=int, default=0x10000)
@@ -68,7 +70,7 @@ def gen_footer(suffix=""):
   print(f"\tb {args.symbol}{suffix}\n")
   print(f".size {args.symbol}, .- {args.symbol}")
 
-def sram_cor():
+def read_cor():
   # Generate preamble
   print("\tlis r3, global_data@ha")
   print("\taddi	r3,r3,global_data@l")
@@ -100,8 +102,8 @@ def jump_cor():
 
 gen_header()
 
-if args.sram:
-  sram_cor()
+if args.read:
+  read_cor()
 else:
   jump_cor()
 

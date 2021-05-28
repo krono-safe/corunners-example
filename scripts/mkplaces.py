@@ -93,7 +93,6 @@ abline(v=(seq(1, ${sets},1)), col="black", lty="dotted", lwd=${sets}/4)
 """
 
 R_SCRIPT_FOOTER_TEMPLATE = """
-# Total n: ${ns} (should be ${nt}, if all the EA are ploted)
 dev.off()\n
 """
 
@@ -129,7 +128,7 @@ def getopts(argv):
   parser.add_argument("--corunner-core", type=int)
   parser.add_argument("--output-dir", "-o", type=Path, required=True)
   parser.add_argument("--task", choices=["G", "H", 'U'], required=True)
-  parser.add_argument("--timer", type=float, default=5e6)
+  parser.add_argument("--timer", type=float, required=True)
   parser.add_argument("--stats", action='store_true')
   parser.add_argument("--output-json", type=Path)
   parser.add_argument("--product", "-p", type=str, required=True,

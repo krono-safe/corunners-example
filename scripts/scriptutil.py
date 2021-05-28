@@ -8,17 +8,18 @@ from subprocess import PIPE, run, TimeoutExpired, CalledProcessError
 from string import Template
 from sys import exit, stderr
 from time import sleep
+from io import IOBase
 
 EA = namedtuple("EA", ["source", "target"])
 
-def load_json(f, s=False, o=True):
-    if s:
+def load_json(f, o=True):
+    if ( isinstance(f, str) or isinstance(f, bytes) ) and not o:
         return json.loads(f)
-    if o:
+    elif isinstance(f, IOBase):
+        return json.load(f)
+    else:
         with open(f, 'r') as jf:
             return json.load(jf)
-    else:
-        return json.load(f)
 
 def dump_json(obj, f=None, s=False):
     if s:
@@ -55,7 +56,7 @@ def decode_file(input_file, timer):
         # Val is the number of quota timer ticks.
         #   Time_s = NbTicks / Freq_Hz
         #
-        # The ticker ticks at 5MHz, hence Freq_Hz = 5e6
+        # The ticker ticks at 5MHz for the MPC5777m and at 75MHz for the P2020.
         # We want a result in ms, so we * 1e3
         val_ms = float(val) / timer * 1e3
         all_time += val_ms
@@ -84,7 +85,7 @@ def decode_file(input_file, timer):
 
 def load_db(kdbv, path_to_db):
     proc = run([kdbv, path_to_db], stdout=PIPE, check=True)
-    return json.loads(proc.stdout)
+    return load_json(proc.stdout, o=False)
 
 
 def get_nodes_to_ea(args):
