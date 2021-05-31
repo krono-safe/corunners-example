@@ -111,154 +111,141 @@ LATEX_FOOTER = r"""
 
 
 def check_layout(layout):
-  rows = len(layout)
-  assert rows > 0
-  cols = len(layout[0])
-  for row in layout:
-      assert len(row) == cols
-  return rows, cols
+    rows = len(layout)
+    assert rows > 0
+    cols = len(layout[0])
+    for row in layout:
+        assert len(row) == cols
+    return rows, cols
 
 def getopts(argv):
-  parser = argparse.ArgumentParser()
-  parser.add_argument("--kdbv", type=Path, required=True)
-  parser.add_argument("--kcfg", type=Path, required=True)
-  parser.add_argument("--kapp", type=Path, required=True)
-  parser.add_argument("--traces-dir", type=Path, required=True)
-  parser.add_argument("--core", type=int, required=True)
-  parser.add_argument("--corunner-core", type=int)
-  parser.add_argument("--output-dir", "-o", type=Path, required=True)
-  parser.add_argument("--task", choices=["G", "H", 'U'], required=True)
-  parser.add_argument("--timer", type=float, required=True)
-  parser.add_argument("--stats", action='store_true')
-  parser.add_argument("--output-json", type=Path)
-  parser.add_argument("--product", "-p", type=str, required=True,
-                      choices=[P2020,MPC5777M])
-  return parser.parse_args(argv[1:])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--kdbv", type=Path, required=True)
+    parser.add_argument("--kcfg", type=Path, required=True)
+    parser.add_argument("--kapp", type=Path, required=True)
+    parser.add_argument("--traces-dir", type=Path, required=True)
+    parser.add_argument("--core", type=int, required=True)
+    parser.add_argument("--corunner-core", type=int)
+    parser.add_argument("--output-dir", "-o", type=Path, required=True)
+    parser.add_argument("--task", choices=["G", "H", 'U'], required=True)
+    parser.add_argument("--timer", type=float, required=True)
+    parser.add_argument("--stats", action='store_true')
+    parser.add_argument("--output-json", type=Path)
+    parser.add_argument("--product", "-p", type=str, required=True,
+                        choices=[P2020,MPC5777M])
+    return parser.parse_args(argv[1:])
 
 
 def gen_r_script(data, layout, sets, out_dir):
-  def complete_script(template, context):
-    global R_SCRIPT
-    R_SCRIPT += substi_temp(template, context)
-  def complete_test(ea, sets, task):
-    complete_script(TESTS_R_TEMPLATE, {'ea0': ea[0],
-                                    'ea1_': ea[1:],
-                                    'sets': sets,
-                                    'pos': task[1:],
-                                    'task': task})
+    def complete_script(template, context):
+        global R_SCRIPT
+        R_SCRIPT += substi_temp(template, context)
+    def complete_test(ea, sets, task):
+        complete_script(TESTS_R_TEMPLATE, {'ea0': ea[0],
+                                        'ea1_': ea[1:],
+                                        'sets': sets,
+                                        'pos': task[1:],
+                                        'task': task})
 
-  rows, cols = check_layout(layout)
-  ns = 0
-  m = 0
-  info_set = sorted(set(list(data.values())[0]['sample']))
-  tests = {}
-  ntests = len(info_set)
+    rows, cols = check_layout(layout)
+    ns = 0
+    m = 0
+    info_set = sorted(set(list(data.values())[0]['sample']))
+    tests = {}
+    ntests = len(info_set)
 
-  for sample in info_set:
-    t, c = sample.split('-')
-    if t not in tests.keys():
-      tests[t] = list()
-    tests[t].append(c)
-    if not NO_SEP:
-      l = len(tests[t])
-      if l > m:
-        m = l
-  if NO_SEP:
-    m = sets
+    for sample in info_set:
+        t, c = sample.split('-')
+        if t not in tests.keys():
+            tests[t] = list()
+        tests[t].append(c)
+        if not NO_SEP:
+            l = len(tests[t])
+            if l > m:
+                m = l
+    if NO_SEP:
+        m = sets
 
-  complete_script(R_SCRIPT_HEADER_TEMPLATE, {'rows': 1,
-                                             'cols': 1,
-                                             'sets': m,
-                                             'onefile': OF})
+    complete_script(R_SCRIPT_HEADER_TEMPLATE, {'rows': 1,
+                                               'cols': 1,
+                                               'sets': m,
+                                               'onefile': OF})
 
 
-  for ea in [g for r in layout for g in r if g]:
-    n = int(len(data[ea]["values"]) / sets)
-    ns += n
-    complete_script(EA_R_TEMPLATE, {'ea': ea,
-                                    'n': n})
-    if not NO_SEP:
-      for task in tests.keys():
-        complete_test(ea, len(tests[task]), task)
-    else:
-      complete_test(ea, sets, "")
-      complete_test
+    for ea in [g for r in layout for g in r if g]:
+        n = int(len(data[ea]["values"]) / sets)
+        ns += n
+        complete_script(EA_R_TEMPLATE, {'ea': ea,
+                                        'n': n})
+        if not NO_SEP:
+            for task in tests.keys():
+                complete_test(ea, len(tests[task]), task)
+        else:
+            complete_test(ea, sets, "")
+            complete_test
 
-  complete_script(R_SCRIPT_FOOTER_TEMPLATE, {"ns": ns,
-                                             "nt": NVAL})
-  out_dir.mkdir(parents=True, exist_ok=True)
-  with open(out_dir / "plot.R", "w") as stream:
-    stream.write(R_SCRIPT)
+    complete_script(R_SCRIPT_FOOTER_TEMPLATE, {"ns": ns,
+                                               "nt": NVAL})
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with open(out_dir / "plot.R", "w") as stream:
+        stream.write(R_SCRIPT)
 
 def gen_stats_header(d):
-  cols = 0
-  for k, v in d.items():
-    subtitles = ''
-    l = len(v[0])
-    cols = max(cols, l)
-    title = f"&\\multicolumn{{{l}}}{{c|}}{{\\textbf{{{k[0]} {k[1:]}}}}}"
-    for j in v[0]:
-      s = f"& \\textbf{{max({j})}} \\textit{{(ms)}}"
-      if j == 'COFF':
-        subtitles = s + subtitles
-      else:
-        subtitles += s
-    v[1] = substi_temp(LATEX_TASK_HEADER_TEMPLATE, {'title': title,
-                                                    'subtitles': subtitles})
+    cols = 0
+    for k, v in d.items():
+        subtitles = ''
+        l = len(v[0])
+        cols = max(cols, l)
+        title = f"&\\multicolumn{{{l}}}{{c|}}{{\\textbf{{{k[0]} {k[1:]}}}}}"
+        for j in v[0]:
+            s = f"& \\textbf{{max({j})}} \\textit{{(ms)}}"
+            if j == 'COFF':
+                subtitles = s + subtitles
+            else:
+                subtitles += s
+      v[1] = substi_temp(LATEX_TASK_HEADER_TEMPLATE, {'title': title,
+                                                      'subtitles': subtitles})
 
-  return cols
+    return cols
 
 def gen_stats(data, layout, tex_name):
-  info_set = sorted(set(list(data.values())[0]['sample']))
-  bvalues = {}
-  tests = {}
-  ntests = len(info_set)
+    info_set = sorted(set(list(data.values())[0]['sample']))
+    bvalues = {}
+    tests = {}
+    ntests = len(info_set)
 
-  for sample in info_set:
-    t, c = sample.split('-')
-    if t not in tests.keys():
-      tests[t] = [list(), '']
-    tests[t][0].append(c)
-    bvalues[sample] = 0.0
-  cols = gen_stats_header(tests)
-  text = substi_temp(LATEX_HEADER_TEMPLATE, {'cols': 'X|'*cols})
+    for sample in info_set:
+        t, c = sample.split('-')
+        if t not in tests.keys():
+            tests[t] = [list(), '']
+        tests[t][0].append(c)
+        bvalues[sample] = 0.0
+    cols = gen_stats_header(tests)
+    text = substi_temp(LATEX_HEADER_TEMPLATE, {'cols': 'X|'*cols})
 
-  for ea in [g for r in layout for g in r if g]:
-    info = data[ea]
-    values = deepcopy(bvalues)
-    for value, sample in zip(info["values"], info["sample"]):
-      assert sample in values, f"Unknown sample {sample}"
-      values[sample] = max(values[sample], value)
-    for k, v in tests.items():
-      s = ''
-      for c in v[0]:
-        #r0 = calc(values[C0_OFF], values[C0_ON])
-        tmps = f"& {values[k+'-'+c]:.3f}"
-        if c == 'COFF':
-          s = tmps + s
-        else:
-          s += tmps
-      s = f"${ea}$" + s
+    for ea in [g for r in layout for g in r if g]:
+        info = data[ea]
+        values = deepcopy(bvalues)
+        for value, sample in zip(info["values"], info["sample"]):
+            assert sample in values, f"Unknown sample {sample}"
+            values[sample] = max(values[sample], value)
+        for k, v in tests.items():
+            s = ''
+            for c in v[0]:
+                tmps = f"& {values[k+'-'+c]:.3f}"
+                if c == 'COFF':
+                  s = tmps + s
+                else:
+                  s += tmps
+            s = f"${ea}$" + s
 
-#    if r0 > 0.01:
-#      text += r'\textbf{' + f"{r0:.3f} " + r'}'
-#    else:
-#      text += f"{r0:.3f}"
-#    text += ' & '
-#    if symetric:
-#      r1 = calc(values[C1_OFF], values[C1_ON])
-#      text += f"{values[C1_OFF]:.3f} & {values[C1_ON]:.3f} &"
-#      if r1 > 0.01:
-#        text += r'\textbf{' + f"{r1:.3f} " + r'} '
-#      else:
-#        text += f"{r1:.3f}"
-      v[1] += f"\n{s}\\\\"
-  for v in tests.values():
-    text += f"{v[1]}\\hline"
-  text += LATEX_FOOTER
-  print("To include the stats tex file add: '\input{", tex_name,"}' where you wants to include it (requires to use the tabu and longtables packages)", sep='', file=stderr)
-  with open(tex_name.with_suffix('.tex'), "w") as stream:
-    stream.write(text)
+        v[1] += f"\n{s}\\\\"
+    for v in tests.values():
+        text += f"{v[1]}\\hline"
+    text += LATEX_FOOTER
+    print("To include the stats tex file add: '\input{", tex_name,"}' where you wants to include it (requires to use the tabu and longtables packages)", sep='', file=stderr)
+    with open(tex_name.with_suffix('.tex'), "w") as stream:
+        stream.write(text)
 
 def main(argv):
   """
@@ -285,41 +272,41 @@ def main(argv):
       }
     }
   """
-  if IGN and IGN != ['']:
-    global OF
-    OF += '_zoomed'
-  args = getopts(argv)
-  if args.corunner_core == None:
-    args.corunner_core = abs(1-args.core)
-  cores = [args.core, args.corunner_core]
+    if IGN and IGN != ['']:
+        global OF
+        OF += '_zoomed'
+    args = getopts(argv)
+    if args.corunner_core == None:
+        args.corunner_core = abs(1-args.core)
+    cores = [args.core, args.corunner_core]
 
 
-  # Map indexed by EA:
-  #   (src,dst) => name
-  ea_to_name, _ = get_nodes_to_ea(args)
+    # Map indexed by EA:
+    #   (src,dst) => name
+    ea_to_name, _ = get_nodes_to_ea(args)
 
-  data = {}
-  groups = {}
-  print(IGN)
-  for f in args.traces_dir.iterdir():
-    if f.suffix == '.bin':
-      name = str(f.stem).upper()
-      if name not in IGN:
-        print(name)
-        data[name] = decode_file(f, args.timer)
-        groups[name] = (f"Core {cores[0]}", "ON", False)
-  layout = LAYOUTS[args.task]
+    data = {}
+    groups = {}
+    print(IGN)
+    for f in args.traces_dir.iterdir():
+        if f.suffix == '.bin':
+            name = str(f.stem).upper()
+            if name not in IGN:
+                print(name)
+                data[name] = decode_file(f, args.timer)
+                groups[name] = (f"Core {cores[0]}", "ON", False)
+    layout = LAYOUTS[args.task]
 
-  jdata = gen_json_data(data, ea_to_name, args.output_dir, groups)
-  gen_r_script(jdata, layout, len(data), args.output_dir)
+    jdata = gen_json_data(data, ea_to_name, args.output_dir, groups)
+    gen_r_script(jdata, layout, len(data), args.output_dir)
 
-  if args.stats:
-    pass
-    #gen_stats(jdata, layout, args.output_dir.resolve() / f"stats_{args.task}")
-  if args.output_json is not None:
-    with open(args.output_json, "w") as outp:
-      dump_json(jdata, outp)
+    if args.stats:
+        pass
+        #gen_stats(jdata, layout, args.output_dir.resolve() / f"stats_{args.task}")
+    if args.output_json is not None:
+        with open(args.output_json, "w") as outp:
+            dump_json(jdata, outp)
 
 
 if __name__ == "__main__":
-  main(sys.argv)
+    main(sys.argv)

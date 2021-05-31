@@ -10,24 +10,27 @@ from scripts.scriptutil import load_db, load_json, dump_json, write_template, ps
 from operator import itemgetter
 
 def corunner_to_list(s):
-  """
-  This function takes the corunner string (a comma separated list: <core>,<start address of read>) and returns a python list of the same form (with none as second element if there is only a core). This allows to set a start address for each corunner in case there is at least two.
-  Should not be used except as an argument parser type.
-  """
-  pars = s.split(',')
-  pars[0] = int(pars[0])
-  assert pars[0] in CORES, \
-    f"The corunner id must be one of {CORES.join(', ')}"
-  l = len(pars)
-  if l > 2:
-    raise argparse.ArgumentTypeError("Corunners parameters must be of type <core>,<start address of read>")
-  elif l == 2 and pars[1] != '':
-    return pars
-  else:
-    return [pars[0], None]
+    """
+    This function takes the corunner string (a comma separated list: <core>,<start address of read>) and returns a python list of the same form (with none as second element if there is only a core). This allows to set a start address for each corunner in case there is at least two.
+    Should not be used except as an argument parser type.
+    """
+    pars = s.split(',')
+    pars[0] = int(pars[0])
+    assert pars[0] in CORES, \
+        f"The corunner id must be one of {CORES.join(', ')}"
+    l = len(pars)
+    if l > 2:
+        raise argparse.ArgumentTypeError("Corunners parameters must be of type <core>[,<start address of read>]")
+    elif l == 2 and pars[1] != '':
+        return pars
+    else:
+        return [pars[0], None]
 
 def cor_cores(cors):
-  return [i[0] for i in cors]
+    """
+    Takes a list returned by corunner_to_list and returns a list containing only the cores in the same order (to know which cores are used).
+    """
+    return [i[0] for i in cors]
 
 def getopts(argv):
     parser = argparse.ArgumentParser(description='Corunners builder')
@@ -116,8 +119,6 @@ def gen_kmem_final(default, config, memreport, kdbv, tasks, corunners=list()):
     dump_json(config_json, config)
 
     ret = subprocess.check_call(cmd)
-    #ret = subprocess.Popen(cmd).wait()
-    #assert ret == 0
 
 def get_sources(task_name):
     c_sources = [
