@@ -4,16 +4,39 @@ import json
 from collections import namedtuple
 import tempfile
 import struct
-from subprocess import PIPE, run, TimeoutExpired, CalledProcessError
 from string import Template
-from sys import exit, stderr
 from time import sleep
 from io import IOBase
+from sys import exit, stderr
+from subprocess import PIPE, run, TimeoutExpired, CalledProcessError
 
 EA = namedtuple("EA", ["source", "target"])
 
+
+def run_cmd(cmd, cwd, name='program', timeout=30):
+    try:
+        print("[RUN]", ' '.join(cmd))
+        print(run(
+                  cmd, timeout=timeout, cwd=cwd, check=True,
+                  universal_newlines=True, stderr=PIPE
+              ).stderr, file=stderr)
+        return True
+    except TimeoutExpired:
+        return False
+    except CalledProcessError as e:
+        err = e.stderr
+        lmapi = 'Unknown LMAPI error' in err
+        print(err, file=stderr)
+        if lmapi:
+            print('retrying in 60 seconds', file=stderr)
+            sleep(60)
+            return False
+        else:
+            exit(f"Failed to run {name}")
+
+
 def load_json(f, o=True):
-    if ( isinstance(f, str) or isinstance(f, bytes) ) and not o:
+    if (isinstance(f, str) or isinstance(f, bytes)) and not o:
         return json.loads(f)
     elif isinstance(f, IOBase):
         return json.load(f)
@@ -21,19 +44,23 @@ def load_json(f, o=True):
         with open(f, 'r') as jf:
             return json.load(jf)
 
+
 def dump_json(obj, f=None, s=False):
     if s:
         return json.dumps(obj, indent=2)
     with open(f, 'w') as jf:
         json.dump(obj, jf, indent=2)
 
+
 def substi_temp(template, context):
     return Template(template).substitute(context)
+
 
 def write_template(output_filename, template, context):
     output_filename.parent.mkdir(exist_ok=True, parents=True)
     with open(output_filename, "w") as fileh:
         fileh.write(substi_temp(template, context))
+
 
 def decode_file(input_file, timer):
     sorted_data = dict()
@@ -49,7 +76,8 @@ def decode_file(input_file, timer):
         contents = stream.read()
 
     while offset < len(contents):
-        src, dst, val, esd, ddl = struct.unpack_from(data_format, contents, offset)
+        src, dst, val, esd, ddl = struct.unpack_from(data_format, contents,
+                                                     offset)
         offset += item_size
         count += 1
 
@@ -67,7 +95,7 @@ def decode_file(input_file, timer):
 
         ea = EA(source=src, target=dst)
 
-        if not ea in sorted_data:
+        if ea not in sorted_data:
             print(f"=> {ea} ({src} -> {dst})")
             sorted_data[ea] = []
         sorted_data[ea].append({
@@ -162,7 +190,7 @@ def gen_json_data(data, ea_to_name, out_dir, groups):
     def process(sample, sample_data, group):
         for ea, ea_values in sample_data.items():
             ea_name = ea_to_name[ea]
-            if not ea_name in jdata:
+            if ea_name not in jdata:
                 jdata[ea_name] = {
                     "values": [],
                     "group": [],
@@ -191,44 +219,3 @@ def gen_json_data(data, ea_to_name, out_dir, groups):
 # https://en.wikipedia.org/wiki/Relative_change_and_difference
 def calc(ref, value):
     return (value - ref) / ref * 100.0
-
-def psyko(conf, *cmd_args):
-    cmd = [
-        conf['psyko'],
-        "-K", conf['rtk_dir'],
-        "--product", conf['product'],
-        '--color', 'yes',
-    ] + [*cmd_args]
-    print("[RUN] ", end='')
-    for item in cmd:
-        print(f"'{item}' ", end='')
-    print()
-
-    # Run psyko... This is run in an infinite loop to handle timeouts...
-    # This is especially annoying when you have a weak network connection and
-    # that you fail to request a License. Since running all tests to collect
-    # measures is quite slow, failing because of a timeout on such problems
-    # is quite unpleasant.
-    # So, in case of a network error (highly suggested by the timeout), we
-    # just try again. It's kind of a kludge, but actually saved to much
-    # time.
-    def run_cmd(cmd):
-        try:
-            print(run( cmd, timeout=30, cwd=conf['cwd'], check=True,
-              universal_newlines=True, stderr=PIPE).stderr, file=stderr)
-            return True
-        except TimeoutExpired:
-            return False
-        except CalledProcessError as e:
-            err = e.stderr
-            lmapi = 'Unknown LMAPI error' in err
-            print(err, file=stderr)
-            if lmapi:
-              print('retrying in 60 seconds', file=stderr)
-              sleep(60)
-              return False
-            else:
-              exit("Failed to run psyko")
-
-    while not run_cmd(cmd):
-        pass

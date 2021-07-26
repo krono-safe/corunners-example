@@ -3,7 +3,7 @@
 # Small utility used to generate the data structures of the stubs,
 # that enables to cover all branches.
 
-from random import randint # <-- randint(a,b) -> [a,b] (inclusive)
+from random import randint  # <-- randint(a,b) -> [a,b] (inclusive)
 import argparse
 import sys
 
@@ -16,6 +16,7 @@ def gen_task_H():
     .cond_h4_or_h9 = {randint(0,1)},
     .switch_value = {randint(0,2)},
   }},''')
+
 
 def gen_task_G():
     for i in range(512):
@@ -35,6 +36,7 @@ def main(argv):
         gen_task_H()
     elif args.choice == "task_G":
         gen_task_G()
+
 
 if __name__ == "__main__":
     main(sys.argv)

@@ -1,6 +1,4 @@
 {
-  "memreport": "@MEMREPORT@",
-  "default_kmemory": "@KMEM_DEF@",
   "elements": [
     {
       "names": [

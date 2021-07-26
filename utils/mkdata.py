@@ -6,10 +6,11 @@ import json
 import sys
 from os import environ
 
-from scriptutil import get_nodes_to_ea, decode_file, gen_json_data, calc, substi_temp
+from scriptutil import get_nodes_to_ea, decode_file, gen_json_data, calc, \
+                       substi_temp
 
-P2020 = environ.get('P2020','power-qoriq-p2020-ds-p')
-MPC5777M = environ.get('MPC5777M',  'power-mpc5777m-evb')
+P2020 = environ.get('P2020', 'power-qoriq-p2020-ds-p')
+MPC5777M = environ.get('MPC5777M', 'power-mpc5777m-evb')
 
 C0_OFF = "Task: C0, Corunner: OFF"
 C0_ON = "Task: C0, Corunner: ON"
@@ -85,8 +86,10 @@ dev.off()\n
 
 LATEX_HEADER_TEMPLATE = r"""
 \begin{tabular}{ |c|r|r|r||r|r|r| }\hline
-   & \multicolumn{3}{c||}{\textbf{Core ${core0}}} & \multicolumn{3}{c|}{\textbf{Core ${core1}}} \\\hline
-  \textbf{EA} & \textbf{max(a)} \textit{(ms)} & \textbf{max(b)} \textit{(ms)} & %
+   & \multicolumn{3}{c||}{\textbf{Core ${core0}}} &
+   \multicolumn{3}{c|}{\textbf{Core ${core1}}} \\\hline
+  \textbf{EA} & \textbf{max(a)} \textit{(ms)} &
+  \textbf{max(b)} \textit{(ms)} & %
   $$\bm{R(a, b)}$$ \textit{(\%)}& %
   \textbf{max(c)} \textit{(ms)} & \textbf{max(d)} \textit{(ms)} & %
   $$\bm{R(c, d)}$$ \textit{(\%)} \\\hline
@@ -106,6 +109,7 @@ def check_layout(layout):
         assert len(row) == cols
     return rows, cols
 
+
 def getopts(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("--kdbv", type=Path, required=True)
@@ -121,7 +125,7 @@ def getopts(argv):
     parser.add_argument("--stats", action='store_true')
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--product", "-p", type=str, required=True,
-                        choices=[P2020,MPC5777M])
+                        choices=[P2020, MPC5777M])
     return parser.parse_args(argv[1:])
 
 
@@ -187,9 +191,11 @@ def gen_stats(data, cores, tex_name):
             text += f"{r1:.3f}"
         text += r'\\'+'\n'
     text += LATEX_FOOTER
-    print("To include the stats tex file add: '\input{", tex_name,"}' where you wants to include it", sep='')
+    print(r"To include the stats tex file add: '\input{", tex_name,
+          "}' where you wants to include it", sep='')
     with open(tex_name.with_suffix('.tex'), "w") as stream:
         stream.write(text)
+
 
 def main(argv):
     """
@@ -233,7 +239,7 @@ def main(argv):
         cores = [1, 2]
 
     data[C1_OFF] = decode_file(args.c1_off, args.timer)
-    data[C1_ON] =  decode_file(args.c1_on, args.timer)
+    data[C1_ON] = decode_file(args.c1_on, args.timer)
 
     layout = LAYOUTS[args.task]
 
@@ -249,7 +255,8 @@ def main(argv):
     gen_r_script(jdata, layout, args.output_dir)
 
     if args.stats:
-        gen_stats(jdata, cores, args.output_dir.resolve() / f"stats_{args.task}")
+        gen_stats(jdata, cores, args.output_dir.resolve() /
+                  f"stats_{args.task}")
     if args.output_json is not None:
         with open(args.output_json, "w") as outp:
             json.dump(jdata, outp, indent=2)

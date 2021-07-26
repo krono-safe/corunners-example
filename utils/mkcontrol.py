@@ -12,6 +12,7 @@ C1_OFF = "Task: C1, Corunner: OFF"
 C1_ON = "Task: C1, Corunner: ON"
 C1_ON_LOCAL = "Task: C1, Corunner: ON (Local)"
 
+
 def getopts(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("--kdbv", type=Path, required=True)
@@ -124,7 +125,10 @@ def gen_stats(data):
 
     text = r"""
 \begin{tabular}{ |c|c|r|r|r|r|r| }\hline
- & \textbf{EA} & \textbf{max(1)} \textit{(ms)} & \textbf{max(2)} \textit{(ms)} & \textbf{max(3)} \textit{(ms)} & %
+ & \textbf{EA} & %
+ \textbf{max(1)} \textit{(ms)} & %
+ \textbf{max(2)} \textit{(ms)} & %
+ \textbf{max(3)} \textit{(ms)} & %
   $\bm{R(1, 2)}$ \textit{(\%)}& %
   $\bm{R(1, 3)}$ \textit{(\%)} %
   \\\hline
@@ -149,6 +153,7 @@ def gen_stats(data):
 \end{tabular}
 """
     print(text)
+
 
 def main(argv):
     args = getopts(argv)
@@ -179,6 +184,7 @@ def main(argv):
     gen_r_script(jdata, args.output_dir)
     if args.stats:
         gen_stats(jdata)
+
 
 if __name__ == "__main__":
     main(sys.argv)

@@ -1,19 +1,26 @@
 #! /usr/bin/env python3
 #
-# This script generates the json files for the memory placement. It allows to control the placement of two parts:
+# This script generates the json files for the memory placement.
+# It allows to control the placement of two parts:
 #  * the task;
 #  * the co_runners;
 #
 # Usage:
-#   python3 gen-kmem.py --config {json config file} --memreport {ks memreport file} --default_kmemory {default kmemory json file}
+#   python3 gen-kmem.py --config {json config file} --memreport \
+#        {ks memreport file} --default_kmemory {default kmemory json file}
 #
 # Notes:
-#   * The default kmemory will be overwritten. To avoid that, add --out_kmem to specify an other output file.
-#   * An exemple template for the json config file is available at /exemples/mem-place.json. In each sections, at least of address or region must be present. The names of the elements must be the task names for agents and the identifiers in the default kmem for the corunners.
-#  * Except the config file arguments, all options can be put in the config json. options specified as arguments will overwrite options specified in the config.
+#   * The default kmemory will be overwritten.
+#     To avoid that, add --out_kmem to specify an other output file.
+#   * An exemple template for the json config file is available at
+#     /exemples/mem-place.json. In each sections, at least of address or
+#     region must be present. The names of the elements must be the task names
+#     for agents and the identifiers in the default kmem for the corunners.
+#   * Except the config file arguments, all options can be put in the config
+#     json. options specified as arguments will overwrite options specified in
+#     the config.
 #
 # Both the data and the text can be set separatly.
-
 
 import argparse
 import sys
@@ -22,12 +29,15 @@ from scriptutil import load_db, load_json, dump_json
 from copy import deepcopy
 from pathlib import Path
 
-def del_all_list(l, rem):
-    for el in l:
+
+def del_all_list(lst, rem):
+    for el in lst:
         rem.remove(el)
 
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', nargs='?', type=argparse.FileType('r'), default='-')
+parser.add_argument('--config', nargs='?', type=argparse.FileType('r'),
+                    default='-')
 parser.add_argument('--memreport', type=Path)
 parser.add_argument('--default_kmemory', type=Path)
 parser.add_argument('--out_kmemory', type=Path)
@@ -44,7 +54,8 @@ try:
     if not args.kdbv:
         args.kdbv = config['kdbv']
 except KeyError as e:
-    print(f"{e.args[0]} must be pased either in the config json or in program parameters!", file=stderr)
+    print(f"{e.args[0]} must be pased either in the config json or in "
+          "program parameters!", file=stderr)
 
 if not args.out_kmemory:
     args.out_kmemory = config.get('out_kmemory', args.default_kmemory)
@@ -69,7 +80,8 @@ for el in config['elements']:
             if 'domains' in reg:
                 del_dom = []
                 for dom in reg['domains']:
-                    if 'identifier' in dom and dom['identifier'] in el['names']:
+                    if ('identifier' in dom and
+                            dom['identifier'] in el['names']):
                         d = set()
                         for sec in dom['output_sections']:
                             d.add(sec['name'])
@@ -98,8 +110,9 @@ for el in config['elements']:
         continue
 
     for sec in el['sections']:
-        assert set(sec.keys()).intersection({'region','address'}), \
-            "A least one of 'region', 'address' must be present in placement configuration"
+        assert set(sec.keys()).intersection({'region', 'address'}), \
+            "A least one of 'region', 'address' must be present in placement \
+             configuration"
         d = set()
         comp = False
         secs_2 = deepcopy(secs)
@@ -129,7 +142,8 @@ for el in config['elements']:
                     reg['domains'] = []
                 if 'address' not in sec:
                     if not reg['domains']:
-                        secs_2[0][1]['output_sections'][0]['physical_address'] = reg['physical_address']
+                        secs_2[0][1]['output_sections'][0]['physical_address']\
+                            = reg['physical_address']
                     for s in secs_2:
                         reg['domains'].append(s[1])
                 else:
@@ -137,7 +151,7 @@ for el in config['elements']:
                     addr2 = 0
                     place_size = []
                     for s in secs_2:
-                        dom_size=0
+                        dom_size = 0
                         for name in s[0]:
                             dom_size += sec_sat[name][0]
                         place_size.append(dom_size)
@@ -145,49 +159,64 @@ for el in config['elements']:
                     reg2 = deepcopy(reg['domains'])
                     placed = False
                     dec = False
+
                     def al(os, j):
-                        align=0
+                        align = 0
                         if 'alignment' in os:
                             align = os['alignment']**3
                         elif j == 0:
                             align = 4096
-                        if align and os['physical_address']%align:
-                            off = align-os['physical_address']%align
+                        if align and os['physical_address'] % align:
+                            off = align-os['physical_address'] % align
                         else:
                             off = 0
                         os['physical_address'] += off
                         return off
                     for i in range(0, len(reg2)):
-                        l = 0
+                        leng = 0
                         if placed:
-                            l = len(secs_2)
-                        osi = reg['domains'][i+l]['output_sections']
+                            leng = len(secs_2)
+                        osi = reg['domains'][i+leng]['output_sections']
                         for j in range(0, len(reg2[i]['output_sections'])):
                             os = osi[j]
                             if not placed:
-                                addr2 = os['physical_address'] if 'physical_address' in os else sec_sat[os['name']][1]
-                                if addr1 < sec['address'] < addr2+sec_sat[os['name']][0]:
+                                addr2 = os['physical_address'] \
+                                    if 'physical_address' in os \
+                                    else sec_sat[os['name']][1]
+                                if (addr1 < sec['address'] <
+                                        addr2+sec_sat[os['name']][0]):
                                     os0 = osi[0]
-                                    #os0['physical_address'] = sec_sat[os0['name']][1]
+                                    #os0['physical_address']
+                                    #= sec_sat[os0['name']][1]
                                     #al(os0, 0)
                                     placed = True
                                     off = 0
                                     align = 0
                                     for s in secs_2[::-1]:
-                                        s[1]['output_sections'][0]['physical_address'] = sec['address']+off
-                                        align_tmp = al(s[1]['output_sections'][0], 0)
+                                        out_0 = s[1]['output_sections'][0]
+                                        out_0['physical_address'] \
+                                            = sec['address']+off
+                                        align_tmp = al(out_0, 0)
                                         reg['domains'].insert(i, s[1])
-                                        off += place_size[secs_2.index(s)] + align_tmp
+                                        off += place_size[secs_2.index(s)] \
+                                            + align_tmp
                                         align += align_tmp
-                                    if sec['address'] > addr2 or sum(place_size)+align >= addr2-sec['address']:
+                                    if (sec['address'] > addr2 or
+                                            sum(place_size)+align
+                                            >= addr2-sec['address']):
                                         dec = True
-                                        os['physical_address'] = sec['address']+sum(place_size)+align
+                                        os['physical_address'] \
+                                            = sec['address'] + \
+                                            sum(place_size) + \
+                                            align
                                         al(os, j)
                                         place_size.append(align)
                                     else:
                                         break
                             elif 'physical_address' in os:
-                                os['physical_address'] = os['physical_address']+sum(place_size)
+                                os['physical_address'] \
+                                        = os['physical_address'] + \
+                                        sum(place_size)
                                 al(os, j)
                         if placed and not dec:
                             break
@@ -197,8 +226,9 @@ for el in config['elements']:
                         align = 0
                         off = 0
                         for s in secs_2:
-                            s[1]['output_sections'][0]['physical_address'] = sec['address'] + off
-                            align_tmp = al(s[1]['output_sections'][0], 0)
+                            out_0 = s[1]['output_sections'][0]
+                            out_0['physical_address'] = sec['address'] + off
+                            align_tmp = al(out_0, 0)
                             if 'domains' not in reg:
                                 reg['domains'] = []
                             reg['domains'].append(s[1])

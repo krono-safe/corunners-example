@@ -12,6 +12,7 @@ C0_ON = "Task: C0, Corunner: ON"
 C1_OFF = "Task: C1, Corunner: OFF"
 C1_ON = "Task: C1, Corunner: ON"
 
+
 def getopts(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("file1", type=Path)
@@ -19,24 +20,24 @@ def getopts(argv):
     return parser.parse_args(argv[1:])
 
 
-
 def gen_stats(data):
     text = r"""
 \begin{tabular}{ |c|r|r|r||r|r|r| }\hline
-   & \multicolumn{3}{c||}{\textbf{Core 1}} & \multicolumn{3}{c|}{\textbf{Core 2}} \\\hline
-  \textbf{EA} & \textbf{max(a)} \textit{(ms)} & \textbf{max(b)} \textit{(ms)} & %
+   & \multicolumn{3}{c||}{\textbf{Core 1}} &
+   \multicolumn{3}{c|}{\textbf{Core 2}} \\\hline
+  \textbf{EA} & \textbf{max(a)} \textit{(ms)} &
+  \textbf{max(b)} \textit{(ms)} & %
   $\bm{R(a, b)}$ \textit{(\%)}& %
   \textbf{max(c)} \textit{(ms)} & \textbf{max(d)} \textit{(ms)} & %
   $\bm{R(c, d)}$ \textit{(\%)} \\\hline
 """
     for ea, info in sorted(data.items()):
         values = {
-            C0_OFF: 0.0,
-            C0_ON: 0.0,
-            C1_OFF: 0.0,
-            C1_ON: 0.0,
-        }
-
+                    C0_OFF: 0.0,
+                    C0_ON: 0.0,
+                    C1_OFF: 0.0,
+                    C1_ON: 0.0,
+                  }
 
         for value, sample in zip(info["values"], info["sample"]):
             assert sample in values, f"Unknown sample {sample}"
@@ -64,7 +65,6 @@ def gen_stats(data):
     print(text)
 
 
-
 def main(argv):
     args = getopts(argv)
 
@@ -87,8 +87,10 @@ def main(argv):
 
     text = r"""
 \begin{tabular}{ |c|r|r|r||r|r|r| }\hline
-   & \multicolumn{3}{c||}{\textbf{Core 1}} & \multicolumn{3}{c|}{\textbf{Core 2}} \\\hline
-  \textbf{EA} & $\Delta_{max(a)}$ \textit{(ms)} & $\Delta_{max(b)}$ \textit{(ms)} & %
+   & \multicolumn{3}{c||}{\textbf{Core 1}} &
+   \multicolumn{3}{c|}{\textbf{Core 2}} \\\hline
+  \textbf{EA} & $\Delta_{max(a)}$ \textit{(ms)} &
+  $\Delta_{max(b)}$ \textit{(ms)} & %
   $\Delta_{R(a, b)}$ \textit{(\%)}& %
   $\Delta_{max(c)}$ \textit{(ms)} & $\Delta_{max(d)}$ \textit{(ms)} & %
   $\Delta_{R(c, d)}$ \textit{(\%)} \\\hline
@@ -105,9 +107,11 @@ def main(argv):
         r1_1 = calc(vals1[C1_OFF], vals1[C1_ON])
         r1_2 = calc(vals2[C1_OFF], vals2[C1_ON])
         text += f"${ea}$ & "
-        text += f"{vals1[C0_OFF]-vals2[C0_OFF]:+.3f} & {vals1[C0_ON]-vals2[C0_ON]:+.3f} & "
+        text += f"{vals1[C0_OFF]-vals2[C0_OFF]:+.3f} & \
+                  {vals1[C0_ON]-vals2[C0_ON]:+.3f} & "
         text += f"{r0_1-r0_2:+.3f} & "
-        text += f"{vals1[C1_OFF]-vals2[C1_OFF]:+.3f} & {vals1[C1_ON]-vals2[C1_ON]:+.3f} & "
+        text += f"{vals1[C1_OFF]-vals2[C1_OFF]:+.3f} & \
+                {vals1[C1_ON]-vals2[C1_ON]:+.3f} & "
         text += f"{r1_1-r1_2:+.3f}"
 
         text += ' \\\\\n'
@@ -117,6 +121,6 @@ def main(argv):
 """
     print(text)
 
+
 if __name__ == "__main__":
     main(sys.argv)
-

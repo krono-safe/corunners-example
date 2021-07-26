@@ -1,0 +1,53 @@
+;; This script is a CMM template script to load the corunner app together with the RTK and set the breakpoints.
+;; =========================================================
+{% block default %}
+PRINT "Running corunners script for {{ product }}"
+
+;; Initialize the card
+DO {{ load_all }} {{ k2_elf }}{% for el in app_elf %} {{ el }}{% endfor %}
+
+{% if l2sram == True %}
+&address_L2SRAM=0x80000000
+;;    For the L2SRAM configuration (the three lines below make a partitionning of the L2SRAM in two equals regions of 256KB).
+;;      L2 control register. L2E=1, l2I=1 l2SIZ=10 L2SRAM=011.
+DATA.Set ANC:iobase.address()+0x00020000 %Long 0xE0030000
+;;      start address of the first region
+DATA.Set ANC:iobase.address()+0x00020100 %Long &address_L2SRAM
+;;      start address of the second region
+DATA.Set ANC:iobase.address()+0x00020108 %Long (&address_L2SRAM+40000)
+
+{% endif %}
+{% if cpupri is defined  and cpupri%}
+;; Set registers to allow some tests
+;;    For the cpu priority ({{ cpupri }}) bit 6 and 7, enabled cores; bits 26-27 and 30-31 cpu priority (both cpu1 before cpu0)
+DATA.Set ANC:iobase.address()+0x00001010 %long {{ cpupri }}
+
+{% endif %}
+CORE.select {{ core }}
+PRINT "Init done!"
+{% endblock %}
+
+{% block breakpoints %}
+{% if break_delete == True %}
+Break.Delete /All
+BREAK.SELECT PROGRAM SOFT
+
+{% endif %}
+Break.Set k2_init /Program
+Break.Set em_raise /Program
+Break.Set em_early_raise /Program
+
+{# For debuging purpose, you can set two more breakpoints #}
+{% if full_debug == True %}
+Break.Set arch_init /Program
+Break.Set em_early_raise /Program
+
+{% endif %}
+{% if extra_breakpoints is defined %}
+{% for breakpoint in extra_breakpoints %}
+Break.set {{ breakpoint }} /Program
+{% endfor %}
+
+{% endif %}
+{% endblock %}
+PRINT "All done, starting program..."

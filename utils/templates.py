@@ -1,94 +1,45 @@
 from os import environ as env
 import __main__
-
+from pathlib import Path
 assert __name__ != '__main__', f"{__file__} module cannot be run directly"
 
-P2020 = env.get("P2020", "power-mpc5777m-evb")
-MPC5777M = env.get("MPC5777M", "power-quoriq-ds-p")
+P2020 = env.get('P2020', 'power-mpc5777m-evb')
+MPC5777M = env.get('MPC5777M', 'power-quoriq-ds-p')
 
 CORES = [0, 1, 2]
-FLASHLIKE = ['FLASH', 'U']
+CO_TYPES = ['read', 'jump']
 
-TOP_DIR = __main__.Path(__main__.__file__).parent.resolve()
-PSY_DIR = TOP_DIR / "psy"
-SRC_DIR = TOP_DIR / "src"
-CFG_DIR = TOP_DIR / "config"
-STUBS_DIR = TOP_DIR / "psy" / "stubs"
+TOP_DIR = Path(__main__.__file__).parent.resolve()
+CFG_DIR = TOP_DIR / 'config'
+APP_DIR = TOP_DIR / 'app'
+KBG_JSON = APP_DIR / 'kbuildgen.json'
 
 class Help:
     RTK_DIR = "Path to the ASTERIOS RTK"
-    CORUNNER = "ID of the co-runner to enable and start address of the array read by it if it is the read type (comma-separated without spaces); can be specified multiple times. If the corunner is the read type, it can be used in combination of the CORUNNER_READ_SIZE_<corunner_id> enironement variable to stpecify the size of the range of the read memory. (else, the default size is 0x2000)"
+    CORUNNER = "ID of the co-runner to enable and start address of the array \
+    read by it if it is the read type (comma-separated without spaces); can \
+    be specified multiple times. If the corunner is the read type, it can be \
+    used in combination of the CORUNNER_READ_SIZE_<corunner_id> enironement \
+    variable to stpecify the size of the range of the read memory. (else, the \
+    default size is 0x2000)"
     TASK = "Name of the nominal task to be compiled for execution"
     PSYKO = "Path to the PsyC Compiler psyko"
     BUILD_DIR = "Path to the build directory in which artifacts are produced"
-    CORE = "ID of the core on which the task will run; must not conflict with --corunner-id"
-    LOCAL_CORUNNERS = "If set, co-runners will be configured to only access local memories"
+    CORE = "ID of the core on which the task will run; must not conflict with \
+    --corunner-id"
+    LOCAL_CORUNNERS = "If set, co-runners will be configured to only access \
+    local memories"
     OUTPUT = "Path where the executable is to be generated"
     PRODUCT = "Name of the ASTERIOS RTK Product"
-    MEM_CONF = "If set, this argument is a json file used to generate the memory placement"
+    MEM_CONF = "If set, this argument is a json file used to generate the \
+    memory placement"
 
-AGENT_CONFIG_HJSON_TEMPLATE = """
-{
-    app: {
-        agents: [
+
+AGENT_CONFIG_JSON_TEMPLATE = """
             {
-                name: $agent_name
-                core: $agent_core
+                "name": "$agent_name",
+                "core": $agent_core
             }
-        ]
-    }
-}
-"""
-
-PSYMODULE_CONFIG_HJSON_TEMPLATE = """
-{
-    psymodule: {
-        psy_pp_flags: [
-            "-I", "include",
-        ]
-        cflags: [
-            "-g2",
-            "-Xdebug-dwarf2",
-            "-Xdebug-local-cie",
-            "-Xdialect-c99",
-            "-X230=1",
-            "-X43=0", # Do not insert eieio !!
-            """ + f'''"-I", "{TOP_DIR}/include",''' + """
-        ]
-    }
-}
-"""
-
-COMPILE_CONFIG_HJSON_TEMPLATE = """
-{
-    compile: {
-        cflags: [
-            "-g2",
-            "-Xdebug-dwarf2",
-            "-Xdebug-local-cie",
-            "-Xdialect-c99",
-            "-X230=1",
-            "-X43=0", # Do not insert eieio !
-            """ + f'''"-I", "{TOP_DIR}/include",''' + """
-        ]
-    }
-}
-"""
-
-CORUNNER_CONFIG_HJSON_TEMPLATE = """
-{
-    app: {
-        cores: [
-            {
-                id: ${corunner_id}
-                co_runner: {
-                    symbol: ${corunner_symbol}
-                    object: ${corunner_object}
-                }
-            }
-        ]
-    }
-}
 """
 
 CORUNNER_KMEMORY_JSON_TEMPLATE = """
