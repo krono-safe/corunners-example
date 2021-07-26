@@ -1,0 +1,26 @@
+{
+  "p2020": {
+    "ds": {
+      "name": "power-qoriq-p2020-ds-p",
+      "timer": 75e6,
+      "hardware": [
+        "l2sram"
+      ],
+      "core_number": 2,
+      "regions": [
+        {
+          "name": "ddr",
+          "start": 0,
+          "size": 2147483648
+        },
+        {
+          "name": "l2sram",
+          "start": 2147483648,
+          "size": 524288
+        }
+      ],
+      "rtk_src_dir": "@QORIQ_RTK_DIR@"
+    }
+  }
+}
+
