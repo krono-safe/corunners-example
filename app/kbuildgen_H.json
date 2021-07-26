@@ -1,0 +1,48 @@
+{
+  "app_config": "config/task_H.hjson",
+
+  "partitions": [
+    {
+      "modules": [
+        { "input_file": "psy/task_H.psy" },
+
+        { "input_file": "psy/stubs/for_task_H.psy" }
+      ],
+      "c_sources": [
+        { "input_file": "src/crc.c" },
+        { "input_file": "src/filter.c" },
+        { "input_file": "src/filter2.c" },
+
+        { "input_file": "psy/stubs/suite_task_H.c" }
+      ]
+    }
+  ],
+
+  "global_compile_config": {
+    "cflags": [
+      "-g2",
+      "-Xdebug-dwarf2",
+      "-Xdebug-local-cie",
+      "-Xdialect-c99",
+      "-X230=1",
+      "-X43=0",
+      "-I", "include"
+    ]
+  },
+
+  "global_psymodule_config": {
+    "psy_pp_flags": [
+            "-I", "include"
+        ],
+        "cflags": [
+            "-g2",
+            "-Xdebug-dwarf2",
+            "-Xdebug-local-cie",
+            "-Xdialect-c99",
+            "-X230=1",
+            "-X43=0",
+            "-I", "include"
+        ]
+    }
+}
+

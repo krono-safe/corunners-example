@@ -1,0 +1,22 @@
+{
+  "app": {
+    "agents": [
+      {
+        "name": "task_U",
+        "eas": [
+          {
+            "from": "start",
+            "to": "c1",
+            "name": "US"
+          },
+          {
+            "from": "c1",
+            "to": "c1",
+            "name": "U0"
+          }
+
+        ]
+      }
+    ]
+  }
+}
