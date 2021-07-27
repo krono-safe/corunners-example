@@ -107,7 +107,7 @@ def decode_file(input_file, timer):
         })
 
     print(f"{count} measures processed, {len(contents)}, {input_file}")
-    print(f"{all_time} ms of run-time, with quota timer of {timer:.1E}Mhz")
+    print(f"{all_time} ms of run-time, with quota timer of {timer:.1E}Hz")
     return sorted_data
 
 

@@ -14,8 +14,8 @@ if task not in FLASHLIKE:
     ag.append(f'sends_to_task_{task}')
 globs.KBG_JSON = globs.APP_DIR / f'kbuildgen_{task}.json'
 pgrms = {}
-pgrms['coff'] = test.build(task, 'test_main_cOFF', core, agents=ag, max_mes=512)
-pgrms['con'] =  test.build(task, 'test_main_cON', core, agents=ag, max_mes=512,
+pgrms[f'c{core}-off'] = test.build(task, 'test_main_cOFF', core, agents=ag, max_mes=512)
+pgrms[f'c{core}-on'] =  test.build(task, 'test_main_cON', core, agents=ag, max_mes=512,
                   corunner={
                             'type': 'read',
                             'read': '0x20000000',
@@ -28,6 +28,6 @@ def exec_pgrm(p):
     print(fname)
     cmd = ['t32/trunner', fname, f'output/{p}.bin', 'output/times.log']
     run_cmd(cmd, TOP_DIR, name='trunner', timeout=None)
-exec_pgrm('coff')
-exec_pgrm('con')
+exec_pgrm(f'c{core}-off')
+exec_pgrm(f'c{core}-on')
 #input()
